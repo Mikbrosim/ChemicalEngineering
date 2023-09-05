@@ -1,4 +1,4 @@
-import main as _
+import mass_mole_balance as _
 _.USE_MOLES = False
 _.USE_MASS = True
 
