@@ -153,6 +153,7 @@ class Substance():
             raise TypeError("Index must be a tuple (in, out)")
     """
 
+
 class SubstanceFraction():
     """
     Each fraction of a substance has
@@ -169,7 +170,6 @@ class SubstanceFraction():
         self.stream = stream
 
         self.idx = self.stream.idx
-        #self.name = f"{'.'.join(map(str,self.idx))}.{substance.name}"
         self.name = f"{stream.name}.{substance.name}"
 
         self.moles=moles
@@ -205,6 +205,7 @@ class SubstanceFraction():
     @mass_fraction.setter
     def mass_fraction(self,value:float|None):consts[self.mass_fraction] = value
 
+
 def const_print():
     """
     Print all of the constants, in a nice way
@@ -215,6 +216,7 @@ def const_print():
             print(f"{key.name.ljust(20-1)}: {val}")
     print("".center(20,"="))
 
+
 def relations_print():
     """
     Print the relations within each stream, in a nice way
@@ -224,6 +226,7 @@ def relations_print():
         if val!=None:
             print(f"{key.ljust(20-1)}: {val}")
     print("".center(20,"="))
+
 
 def combine_eqs():
     """
@@ -242,6 +245,7 @@ def combine_eqs():
 
     return eqs
 
+
 def solve_system(eqs) -> list[dict[sympy.Symbol,float]]: 
     """
     Returns the solutions to the system
@@ -252,6 +256,7 @@ def solve_system(eqs) -> list[dict[sympy.Symbol,float]]:
     print(f"Found {len(sols)} solutions in {round(1000*(time.time()-t))}ms")
     print("".center(20,"="))
     return sols
+
 
 if __name__=="__main__":
     # Setup compounds
