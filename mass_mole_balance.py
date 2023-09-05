@@ -233,13 +233,13 @@ class SubstanceFraction():
 
         relations[self.name]=[]
         if USE_MASS:relations[self.name].append(
-            sympy.Eq(self.moles*self.substance.molar_mass,self.mass)
+            sympy.Eq(self.mass,self.stream.mass*self.mass_fraction)
         )
         if USE_MOLES:relations[self.name].append(
             sympy.Eq(self.moles,self.stream.moles*self.mole_fraction)
         )
         if USE_MOLES and USE_MASS:relations[self.name].append(
-            sympy.Eq(self.mass,self.stream.mass*self.mass_fraction)
+            sympy.Eq(self.moles*self.substance.molar_mass,self.mass)
         )
 
     @property
