@@ -1,6 +1,17 @@
 import sympy
 import time
 
+USE_MOLES = False
+USE_MASS = False
+
+def flag_check(mass=None,moles=None,molar_mass=None,mass_fraction=None,mole_fraction=None):
+    if mass!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass")
+    if moles!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set moles")
+    if molar_mass!=None and not (USE_MOLES and USE_MASS):raise KeyError("USE_MASS and USE_MOLES must be True, to be able to set molar_mass")
+    if mass_fraction!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass_fraction")
+    if mole_fraction!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set mole_fraction")
+
+
 consts:dict[sympy.Symbol,float|None] = {}
 relations:dict[str,list[sympy.Eq]] = {}
 extra_eqs:list[sympy.Eq]=[]
@@ -9,8 +20,10 @@ class CombinedSubstanceFraction():
     """
     Acts as a combination of multiple substance fractions
     """
-    def __init__(self,moles):
+    def __init__(self,moles=None,mass=None):
         self.moles = moles
+        self.mass = mass
+
 class CombinedStream():
     """
     Acts as a combination of multiple streams
@@ -44,53 +57,102 @@ class Stream():
         self.name = f"S.{'.'.join(map(str,self.idx))}"
         self.fractions = {substance:SubstanceFraction(substance=substance,stream=self) for substance in fractions}
 
+        flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
         self.mass = mass
         self.moles = moles
         self.molar_mass = molar_mass
 
-        relations[self.name]=[
-            sympy.Eq(sum(map(lambda fraction: fraction.mass,self.fractions.values())),self.mass),
-            sympy.Eq(sum(map(lambda fraction: fraction.moles,self.fractions.values())),self.moles),
-            sympy.Eq(sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())),self.molar_mass),
-        ]
+        relations[self.name]=[]
+        if USE_MASS:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.mass,self.fractions.values())),self.mass)
+        )
+        if USE_MOLES:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.moles,self.fractions.values())),self.moles)
+        )
+        if USE_MOLES and USE_MASS:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())),self.molar_mass)
+        )
         
 
     @property
     def moles(self):return sympy.symbols(f'n_{self.name}')
     @moles.setter
-    def moles(self,value:float|None):consts[self.moles] = value
+    def moles(self,value:float|None):
+        flag_check(moles=value)
+        consts[self.moles] = value
     
     @property    
     def mass(self):return sympy.symbols(f'm_{self.name}')
     @mass.setter
-    def mass(self,value:float|None):consts[self.mass] = value
+    def mass(self,value:float|None):
+        flag_check(mass=value)
+        consts[self.mass] = value
 
     @property
     def molar_mass(self):return sympy.symbols(f'M_{self.name}')
     @molar_mass.setter
-    def molar_mass(self,value:float|None):consts[self.molar_mass] = value
+    def molar_mass(self,value:float|None):
+        flag_check(molar_mass=value)
+        consts[self.molar_mass] = value
 
     def __getitem__(self, substance:"Substance"):
         if not isinstance(substance, Substance):raise TypeError("Index must be a substance")
         if not substance in self.fractions:raise IndexError("Substance does not exist in stream")
         return self.fractions[substance]
 
+    def __zipped_streams(self,other,key):
+        substances = set(list(self.fractions.keys())+list(other.fractions.keys()))
+        for substance in substances:
+            self_val:int = getattr(self.fractions[substance],key,0)
+            other_val:int = getattr(other.fractions[substance],key,0)
+            yield substance,self_val,other_val
+
+
     def __add__(self,other:"Stream|CombinedStream"):
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
-        if not self.fractions.keys()==other.fractions.keys():raise TypeError("The two Streams must contain the same fractions")
-        return CombinedStream(fractions={substance:CombinedSubstanceFraction(self.fractions[substance].moles + other.fractions[substance].moles) for substance in self.fractions.keys()})
+        fracs:dict["Substance","SubstanceFraction|CombinedSubstanceFraction"]={}
+
+        if USE_MOLES:
+            zipped_vals = self.__zipped_streams(other,"moles")
+            for substance,self_val,other_val in zipped_vals:
+                fracs[substance] = CombinedSubstanceFraction(moles=self_val + other_val)
+        elif USE_MASS:
+            zipped_vals = self.__zipped_streams(other,"mass")
+            for substance,self_val,other_val in zipped_vals:
+                fracs[substance] = CombinedSubstanceFraction(mass=self_val + other_val)
+        else:
+            raise KeyError("Either USE_MOLES or USE_MASS must be True")
+
+        return CombinedStream(fractions=fracs)
 
     def __sub__(self,other:"Stream|CombinedStream"):
         raise NotImplementedError()
-
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
-        if not self.fractions.keys()==other.fractions.keys():raise TypeError("The two Streams must contain the same fractions")
-        return CombinedStream(fractions={substance:CombinedSubstanceFraction(self.fractions[substance].moles - other.fractions[substance].moles) for substance in self.fractions.keys()})
+
+        if USE_MOLES:
+            zipped_vals = self.__zipped_streams(other,"moles")
+            for substance,self_val,other_val in zipped_vals:
+                fracs[substance] = CombinedSubstanceFraction(moles=self_val - other_val)
+        elif USE_MASS:
+            zipped_vals = self.__zipped_streams(other,"mass")
+            for substance,self_val,other_val in zipped_vals:
+                fracs[substance] = CombinedSubstanceFraction(mass=self_val - other_val)
+        else:
+            raise KeyError("Either USE_MOLES or USE_MASS must be True")
+
+        return CombinedStream(fractions=fracs)
 
     def __eq__(self,other:"Stream|CombinedStream"):
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
-        if not self.fractions.keys()==other.fractions.keys():raise TypeError("The two Streams must contain the same fractions")
-        return [sympy.Eq(self.fractions[substance].moles,other.fractions[substance].moles) for substance in self.fractions.keys()]
+
+        if USE_MOLES:
+            zipped_vals = self.__zipped_streams(other,"moles")
+        elif USE_MASS:
+            zipped_vals = self.__zipped_streams(other,"mass")
+        else:
+            raise KeyError("Either USE_MOLES or USE_MASS must be True")
+
+        return [sympy.Eq(self_val,other_val) for substance,self_val,other_val in zipped_vals]
 
 
 class Substance():
@@ -111,6 +173,7 @@ class Substance():
     def __init__(self, name, mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
         self.name = name
 
+        flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
         self.mass = mass
         self.moles = moles
         self.molar_mass = molar_mass
@@ -120,38 +183,26 @@ class Substance():
     @property
     def molar_mass(self):return sympy.symbols(f'M_{self.name}')
     @molar_mass.setter
-    def molar_mass(self,value:float|None):consts[self.molar_mass] = value
+    def molar_mass(self,value:float|None):
+        flag_check(molar_mass=value)
+        consts[self.molar_mass] = value
     
     @property    
     def moles(self):return sympy.symbols(f'n_{self.name}')
     @moles.setter
-    def moles(self,value:float|None):consts[self.moles] = value
+    def moles(self,value:float|None):
+        flag_check(moles=value)
+        consts[self.moles] = value
     
     @property    
     def mass(self):return sympy.symbols(f'm_{self.name}')
     @mass.setter
-    def mass(self,value:float|None):consts[self.mass] = value
+    def mass(self,value:float|None):
+        flag_check(mass=value)
+        consts[self.mass] = value
 
     def add_fraction(self,fraction):
         self.fractions.append(fraction)
-
-    """
-    def update_relations(self):
-        relations[self.name]=[
-            sum(map(lambda fraction: fraction.mass,self.fractions))==self.mass,
-            sum(map(lambda fraction: fraction.moles,self.fractions))==self.moles,
-            sum(map(lambda fraction: fraction.molar_mass,self.fractions))==self.mass,
-        ]
-    """
-
-    """
-    def __getitem__(self, index):
-        if isinstance(index, tuple) and len(index) == 2:
-            row, col = index
-            print(index)
-        else:
-            raise TypeError("Index must be a tuple (in, out)")
-    """
 
 
 class SubstanceFraction():
@@ -172,6 +223,7 @@ class SubstanceFraction():
         self.idx = self.stream.idx
         self.name = f"{stream.name}.{substance.name}"
 
+        flag_check(mass=mass,moles=moles,mole_fraction=mole_fraction,mass_fraction=mass_fraction)
         self.moles=moles
         self.mass=mass
         self.mole_fraction=mole_fraction
@@ -179,31 +231,44 @@ class SubstanceFraction():
 
         self.substance.add_fraction(self)
 
-        relations[self.name]=[
-            sympy.Eq(self.moles*self.substance.molar_mass,self.mass),
-            sympy.Eq(self.moles,self.stream.moles*self.mole_fraction),
-            sympy.Eq(self.mass,self.stream.mass*self.mass_fraction),
-        ]
+        relations[self.name]=[]
+        if USE_MASS:relations[self.name].append(
+            sympy.Eq(self.moles*self.substance.molar_mass,self.mass)
+        )
+        if USE_MOLES:relations[self.name].append(
+            sympy.Eq(self.moles,self.stream.moles*self.mole_fraction)
+        )
+        if USE_MOLES and USE_MASS:relations[self.name].append(
+            sympy.Eq(self.mass,self.stream.mass*self.mass_fraction)
+        )
 
     @property
     def moles(self):return sympy.symbols(f'n_{self.name}')
     @moles.setter
-    def moles(self,value:float|None):consts[self.moles] = value
+    def moles(self,value:float|None):
+        flag_check(moles=value)
+        consts[self.moles] = value
 
     @property
     def mass(self):return sympy.symbols(f'm_{self.name}')
     @mass.setter
-    def mass(self,value:float|None):consts[self.mass] = value
+    def mass(self,value:float|None):
+        flag_check(mass=value)
+        consts[self.mass] = value
 
     @property
     def mole_fraction(self):return sympy.symbols(f'n%_{self.name}')
     @mole_fraction.setter
-    def mole_fraction(self,value:float|None):consts[self.mole_fraction] = value
+    def mole_fraction(self,value:float|None):
+        flag_check(mole_fraction=value)
+        consts[self.mole_fraction] = value
 
     @property
     def mass_fraction(self):return sympy.symbols(f'm%_{self.name}')
     @mass_fraction.setter
-    def mass_fraction(self,value:float|None):consts[self.mass_fraction] = value
+    def mass_fraction(self,value:float|None):
+        flag_check(mass_fraction=value)
+        consts[self.mass_fraction] = value
 
 
 def const_print():
@@ -252,43 +317,7 @@ def solve_system(eqs) -> list[dict[sympy.Symbol,float]]:
     """
     t=time.time()
     print(" SOLVING ".center(20,"="))
-    sols = sympy.solve(eqs)
+    sols = sympy.solve(eqs,domain=sympy.Reals)
     print(f"Found {len(sols)} solutions in {round(1000*(time.time()-t))}ms")
     print("".center(20,"="))
     return sols
-
-
-if __name__=="__main__":
-    # Setup compounds
-    Butanol = Substance(name="1-butanol")
-    Butanol.molar_mass=74.11
-
-    Ethanol = Substance(name="ethanol")
-    Ethanol.molar_mass=46.07
-
-    # Setup stream
-    s0_1 = Stream(idx=(0,1),fractions=[Ethanol,Butanol])
-    s0_1[Ethanol].mole_fraction=0.4
-    s0_1.moles=4000
-
-    s1_0_0 = Stream(idx=(1,0,0),fractions=[Ethanol,Butanol])
-    s1_0_0[Ethanol].mole_fraction=0.98
-
-    s1_0_1 = Stream(idx=(1,0,1),fractions=[Ethanol,Butanol])
-    s1_0_1[Butanol].mole_fraction=0.98
-
-    # Unit 1
-    extra_eqs += s0_1 == (s1_0_0 + s1_0_1)
-
-    # Print eqs
-    const_print()
-    relations_print()
-
-    # Solve
-    eqs = combine_eqs()
-    sols = solve_system(eqs)
-    assert len(sols)!=0,"No solutions found"
-    assert len(sols)==1,"Multiple solutions found"
-    sol = sols[0]
-
-    print(sol)
