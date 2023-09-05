@@ -292,6 +292,3 @@ if __name__=="__main__":
     sol = sols[0]
 
     print(sol)
-    #for k,v in sol.items():
-    #    print(f"{k}={v}")
-    #print(sol[s0_1[Ethanol].mass])
