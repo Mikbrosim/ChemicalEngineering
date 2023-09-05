@@ -317,7 +317,7 @@ def solve_system(eqs) -> list[dict[sympy.Symbol,float]]:
     """
     t=time.time()
     print(" SOLVING ".center(20,"="))
-    sols = sympy.solve(eqs,domain=sympy.Reals)
+    sols = sympy.solve(eqs,domain=sympy.Reals,manual=True)
     print(f"Found {len(sols)} solutions in {round(1000*(time.time()-t))}ms")
     print("".center(20,"="))
     return sols
