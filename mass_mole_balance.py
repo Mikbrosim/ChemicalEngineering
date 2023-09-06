@@ -1,6 +1,11 @@
 import sympy
 import time
 
+try:
+    import pydot
+except ImportError:
+    pydot = None
+
 USE_MOLES = False
 USE_MASS = False
 
@@ -12,8 +17,9 @@ def flag_check(mass=None,moles=None,molar_mass=None,mass_fraction=None,mole_frac
     if mole_fraction!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set mole_fraction")
 
 
-consts:dict[sympy.Symbol,float|None] = {}
+consts:dict[str,dict[sympy.Symbol,float|None]] = {}
 relations:dict[str,list[sympy.Eq]] = {}
+processes:dict[str,tuple[list["Stream"],list["Stream"]]] = {}
 #extra_eqs:list[sympy.Eq]=[]
 
 class CombinedSubstanceFraction():
@@ -105,23 +111,24 @@ class Stream(CombinedStream):
         if type(idx)==int:idx=(idx,)
         if type(idx)!=tuple:raise TypeError("idx must be either int or tuple")
         self.idx = idx
-        self.name = f"S.{'.'.join(map(str,self.idx))}"
+        self.name = f"S{'.'.join(map(str,self.idx))}"
         self.fractions = {substance:SubstanceFraction(substance=substance,stream=self) for substance in fractions}
 
         flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
+        consts[self.name]={}
         self.mass = mass
         self.moles = moles
         self.molar_mass = molar_mass
 
         relations[self.name]=[]
         if USE_MASS:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.mass,self.fractions.values())),self.mass)
+            sympy.Eq(self.mass,sum(map(lambda fraction: fraction.mass,self.fractions.values())))
         )
         if USE_MOLES:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.moles,self.fractions.values())),self.moles)
+            sympy.Eq(self.moles,sum(map(lambda fraction: fraction.moles,self.fractions.values())))
         )
         if USE_MOLES and USE_MASS:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())),self.molar_mass)
+            sympy.Eq(self.molar_mass,sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())))
         )
         
 
@@ -130,27 +137,29 @@ class Stream(CombinedStream):
     @moles.setter
     def moles(self,value:float|None):
         flag_check(moles=value)
-        consts[self.moles] = value
+        consts[self.name][self.moles] = value
     
     @property    
     def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
     @mass.setter
     def mass(self,value:float|None):
         flag_check(mass=value)
-        consts[self.mass] = value
+        consts[self.name][self.mass] = value
 
     @property
     def molar_mass(self):return sympy.symbols(f'M_{{{self.name}}}')
     @molar_mass.setter
     def molar_mass(self,value:float|None):
         flag_check(molar_mass=value)
-        consts[self.molar_mass] = value
+        consts[self.name][self.molar_mass] = value
 
     def __getitem__(self, substance:"Substance"):
         if not isinstance(substance, Substance):raise TypeError("Index must be a substance")
         if not substance in self.fractions:raise IndexError("Substance does not exist in stream")
         return self.fractions[substance]
 
+    def __hash__(self):
+        return int.from_bytes(self.name.encode())
 
 class Substance():
     """
@@ -171,6 +180,7 @@ class Substance():
         self.name = name
 
         flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
+        consts[self.name]={}
         self.mass = mass
         self.moles = moles
         self.molar_mass = molar_mass
@@ -182,21 +192,21 @@ class Substance():
     @molar_mass.setter
     def molar_mass(self,value:float|None):
         flag_check(molar_mass=value)
-        consts[self.molar_mass] = value
+        consts[self.name][self.molar_mass] = value
     
     @property    
     def moles(self):return sympy.symbols(f'n_{{{self.name}}}')
     @moles.setter
     def moles(self,value:float|None):
         flag_check(moles=value)
-        consts[self.moles] = value
+        consts[self.name][self.moles] = value
     
     @property    
     def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
     @mass.setter
     def mass(self,value:float|None):
         flag_check(mass=value)
-        consts[self.mass] = value
+        consts[self.name][self.mass] = value
 
     def add_fraction(self,fraction):
         self.fractions.append(fraction)
@@ -221,6 +231,7 @@ class SubstanceFraction():
         self.name = f"{stream.name}.{substance.name}"
 
         flag_check(mass=mass,moles=moles,mole_fraction=mole_fraction,mass_fraction=mass_fraction)
+        consts[self.name]={}
         self.moles=moles
         self.mass=mass
         self.mole_fraction=mole_fraction
@@ -236,7 +247,7 @@ class SubstanceFraction():
             sympy.Eq(self.moles,self.stream.moles*self.mole_fraction)
         )
         if USE_MOLES and USE_MASS:relations[self.name].append(
-            sympy.Eq(self.moles*self.substance.molar_mass,self.mass)
+            sympy.Eq(self.mass,self.moles*self.substance.molar_mass)
         )
 
     @property
@@ -244,28 +255,28 @@ class SubstanceFraction():
     @moles.setter
     def moles(self,value:float|None):
         flag_check(moles=value)
-        consts[self.moles] = value
+        consts[self.name][self.moles] = value
 
     @property
     def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
     @mass.setter
     def mass(self,value:float|None):
         flag_check(mass=value)
-        consts[self.mass] = value
+        consts[self.name][self.mass] = value
 
     @property
     def mole_fraction(self):return sympy.symbols(f'n%_{{{self.name}}}')
     @mole_fraction.setter
     def mole_fraction(self,value:float|None):
         flag_check(mole_fraction=value)
-        consts[self.mole_fraction] = value
+        consts[self.name][self.mole_fraction] = value
 
     @property
     def mass_fraction(self):return sympy.symbols(f'm%_{{{self.name}}}')
     @mass_fraction.setter
     def mass_fraction(self,value:float|None):
         flag_check(mass_fraction=value)
-        consts[self.mass_fraction] = value
+        consts[self.name][self.mass_fraction] = value
 
 
 def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
@@ -275,22 +286,29 @@ def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
     `in_streams`, the streams going into the process
     `out_streams`,the streams going out of the process
     """
-    if type(name)==int:name=f"P.{name}"
+    # Make sure the function recieves the correct inputs
+    if type(name)==int:name=f"P{name}"
     if type(name)!=str:raise TypeError("Process must be supplied a name or an idx")
     if len(in_streams)==0 or len(out_streams)==0:raise ValueError("The amount of in_streams and out_streams must be non-zero")
 
+    # Setup the equations which relate each of streams going in and out of the process
+    # sum(in) = sum(out)
     rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
     if rel==None:raise NotImplementedError("This is not supposed to happen?")
     relations[name]=rel
+
+    # Used to construct graph, which can be drawed
+    processes[name]=(in_streams,out_streams)
 
 def const_print():
     """
     Print all of the constants, in a nice way
     """
     print(" CONSTS ".center(20,"="))
-    for key,val in consts.items():
-        if val!=None:
-            print(f"{key.name.ljust(20-1)}: {val}")
+    for stream_name,stream_consts in consts.items():
+        for key,val in stream_consts.items():
+            if val!=None:
+                print(f"{key.name.ljust(20-1)}: {val}")
     print("".center(20,"="))
 
 
@@ -320,9 +338,10 @@ def combine_eqs():
     for _eqs in relations.values():
         eqs+=_eqs
 
-    for key,val in consts.items():
-        if val!=None:
-            eqs.append(sympy.Eq(key,val))
+    for stream_name,stream_consts in consts.items():
+        for key,val in stream_consts.items():
+            if val!=None:
+                eqs.append(sympy.Eq(key,val))
 
     return eqs
 
@@ -344,3 +363,63 @@ def solution_print(solution:dict[sympy.Symbol,float],variables:list[sympy.Symbol
     """
     for var in variables:
         print(var,"=",solution[var])
+
+def stream_label(stream:Stream):
+    if type(stream)!=Stream:raise TypeError("Can only generate stream labels for streams...")
+    
+    stream_consts = []
+    for var,val in consts[stream.name].items():
+        if val!=None:
+            stream_consts.append(f"{var} = {val}")
+
+    fraction_consts = []
+    for fraction in stream.fractions.values():
+        for var,val in consts[fraction.name].items():
+            if val!=None:
+                fraction_consts.append(f"{var} = {val}")
+
+    label = "\n".join(stream_consts+fraction_consts+[stream.name])
+    return label
+
+def drawer(out_file_name:str):
+    if pydot==None:raise ImportError("the package pydot must be installed, in order to use this feature")
+
+    # Preprocess
+    in_streams:dict[Stream,str] = {}
+    out_streams:dict[Stream,str] = {}
+    p_names = processes.keys()
+    for p_name,streams in processes.items():
+        for stream in streams[0]:
+            in_streams[stream]=p_name
+        for stream in streams[1]:
+            out_streams[stream]=p_name
+
+    # Make the graph :D
+    graph = pydot.Dot(graph_type='graph', rankdir='LR', splines='true')
+    
+    # Setup nodes
+    node_counter = 0
+    nodes:dict[str,str] = {}
+    for p_name in p_names:
+        node = pydot.Node(f"node_{node_counter}",label=p_name, shape="rectangle")
+        nodes[p_name] = node.get_name()
+        graph.add_node(node)
+
+    # Connect the nodes connected via streams
+    connected_streams = set(in_streams.keys())&set(out_streams.keys())
+    for stream in connected_streams:
+        graph.add_edge(pydot.Edge(nodes[out_streams[stream]], nodes[in_streams[stream]], label=stream_label(stream), dir="forward"))
+    
+    # Connect the leftover nodes to the enviroment?
+    leftover_streams = set(in_streams.keys())^set(out_streams.keys())
+    for stream in leftover_streams:
+        node_counter+=1
+        dummy = pydot.Node(f"node_{node_counter}", shape="point", style="invisible")
+        graph.add_node(dummy)
+        if stream in in_streams.keys():
+            graph.add_edge(pydot.Edge(dummy.get_name(), nodes[in_streams[stream]], label=stream_label(stream), dir="forward"))
+        else:
+            graph.add_edge(pydot.Edge(nodes[out_streams[stream]], dummy.get_name(), label=stream_label(stream), dir="forward"))
+
+    # Save it to png!
+    graph.write(path=out_file_name,prog='dot',format='png')

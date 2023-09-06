@@ -24,6 +24,7 @@ _.process(name=1,in_streams=[s1],out_streams=[s2,s3])
 # Print eqs
 _.const_print()
 _.relations_print()
+_.drawer(__file__.replace("py","png"))
 
 # Solve
 eqs = _.combine_eqs()
