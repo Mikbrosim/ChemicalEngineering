@@ -8,14 +8,14 @@ B = _.Substance(name="B")
 T = _.Substance(name="T")
 
 # Setup stream
-s1 = _.Stream(idx=(1,),fractions=[B,T])
+s1 = _.Stream(idx=1,fractions=[B,T])
 s1[B].mass=500
 s1[T].mass=500
 
-s2 = _.Stream(idx=(2,),fractions=[B,T])
+s2 = _.Stream(idx=2,fractions=[B,T])
 s2[B].mass=450
 
-s3 = _.Stream(idx=(3,),fractions=[B,T])
+s3 = _.Stream(idx=3,fractions=[B,T])
 s3[T].mass=475
 
 # Setup processes

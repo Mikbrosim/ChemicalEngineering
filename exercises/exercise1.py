@@ -9,14 +9,14 @@ Ethanol = _.Substance(name="ethanol")
 Ethanol.molar_mass=46.07
 
 # Setup stream
-s1 = _.Stream(idx=(1,),fractions=[Ethanol,Butanol])
+s1 = _.Stream(idx=1,fractions=[Ethanol,Butanol])
 s1[Ethanol].mole_fraction=0.4
 s1.moles=4000
 
-s2 = _.Stream(idx=(2,),fractions=[Ethanol,Butanol])
+s2 = _.Stream(idx=2,fractions=[Ethanol,Butanol])
 s2[Ethanol].mole_fraction=0.98
 
-s3 = _.Stream(idx=(3,),fractions=[Ethanol,Butanol])
+s3 = _.Stream(idx=3,fractions=[Ethanol,Butanol])
 s3[Butanol].mole_fraction=0.98
 
 # Process 1
