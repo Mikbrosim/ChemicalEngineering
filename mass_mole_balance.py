@@ -31,82 +31,12 @@ class CombinedStream():
     def __init__(self,fractions):
         self.fractions = fractions
 
-    def __sub__(self,other:"Stream|CombinedStream"):return other.__sub__(self)
-    def __add__(self,other:"Stream|CombinedStream"):return other.__add__(self)
-    def __eq__(self,other:"Stream|CombinedStream"):return other.__eq__(self)
-
-
-class Stream():
-    """
-    Each stream has
-    - `idx`, the idx of this stream used to make name
-    - `fractions`, the fraction which this stream consists of
-
-    - `mass`, the total amount of mass in the stream
-    - `moles`, the total amount of moles in the stream
-    - `molar_mass`, the molar_mass of the stream
-
-    - `name`, the name of the stream, which is a suffix for sympy
-
-    The mass must be equal to the sum of its fractions 
-    The moles must be equal to the sum of its fractions 
-    The molar_mass must be equal to the weighted average of its fractions 
-    """
-    def __init__(self, idx:tuple[int,int]|tuple[int,int,int], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
-        self.idx = idx
-        self.name = f"S.{'.'.join(map(str,self.idx))}"
-        self.fractions = {substance:SubstanceFraction(substance=substance,stream=self) for substance in fractions}
-
-        flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
-        self.mass = mass
-        self.moles = moles
-        self.molar_mass = molar_mass
-
-        relations[self.name]=[]
-        if USE_MASS:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.mass,self.fractions.values())),self.mass)
-        )
-        if USE_MOLES:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.moles,self.fractions.values())),self.moles)
-        )
-        if USE_MOLES and USE_MASS:relations[self.name].append(
-            sympy.Eq(sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())),self.molar_mass)
-        )
-        
-
-    @property
-    def moles(self):return sympy.symbols(f'n_{self.name}')
-    @moles.setter
-    def moles(self,value:float|None):
-        flag_check(moles=value)
-        consts[self.moles] = value
-    
-    @property    
-    def mass(self):return sympy.symbols(f'm_{self.name}')
-    @mass.setter
-    def mass(self,value:float|None):
-        flag_check(mass=value)
-        consts[self.mass] = value
-
-    @property
-    def molar_mass(self):return sympy.symbols(f'M_{self.name}')
-    @molar_mass.setter
-    def molar_mass(self,value:float|None):
-        flag_check(molar_mass=value)
-        consts[self.molar_mass] = value
-
-    def __getitem__(self, substance:"Substance"):
-        if not isinstance(substance, Substance):raise TypeError("Index must be a substance")
-        if not substance in self.fractions:raise IndexError("Substance does not exist in stream")
-        return self.fractions[substance]
-
     def __zipped_streams(self,other,key):
         substances = set(list(self.fractions.keys())+list(other.fractions.keys()))
         for substance in substances:
-            self_val:int = getattr(self.fractions[substance],key,0)
-            other_val:int = getattr(other.fractions[substance],key,0)
+            self_val:int = getattr(self.fractions.get(substance),key,0)
+            other_val:int = getattr(other.fractions.get(substance),key,0)
             yield substance,self_val,other_val
-
 
     def __add__(self,other:"Stream|CombinedStream"):
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
@@ -155,6 +85,71 @@ class Stream():
         return [sympy.Eq(self_val,other_val) for substance,self_val,other_val in zipped_vals]
 
 
+class Stream(CombinedStream):
+    """
+    Each stream has
+    - `idx`, the idx of this stream used to make name
+    - `fractions`, the fraction which this stream consists of
+
+    - `mass`, the total amount of mass in the stream
+    - `moles`, the total amount of moles in the stream
+    - `molar_mass`, the molar_mass of the stream
+
+    - `name`, the name of the stream, which is a suffix for sympy
+
+    The mass must be equal to the sum of its fractions 
+    The moles must be equal to the sum of its fractions 
+    The molar_mass must be equal to the weighted average of its fractions 
+    """
+    def __init__(self, idx:tuple[int]|tuple[int,int]|tuple[int,int,int], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
+        self.idx = idx
+        self.name = f"S.{'.'.join(map(str,self.idx))}"
+        self.fractions = {substance:SubstanceFraction(substance=substance,stream=self) for substance in fractions}
+
+        flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
+        self.mass = mass
+        self.moles = moles
+        self.molar_mass = molar_mass
+
+        relations[self.name]=[]
+        if USE_MASS:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.mass,self.fractions.values())),self.mass)
+        )
+        if USE_MOLES:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.moles,self.fractions.values())),self.moles)
+        )
+        if USE_MOLES and USE_MASS:relations[self.name].append(
+            sympy.Eq(sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())),self.molar_mass)
+        )
+        
+
+    @property
+    def moles(self):return sympy.symbols(f'n_{{{self.name}}}')
+    @moles.setter
+    def moles(self,value:float|None):
+        flag_check(moles=value)
+        consts[self.moles] = value
+    
+    @property    
+    def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
+    @mass.setter
+    def mass(self,value:float|None):
+        flag_check(mass=value)
+        consts[self.mass] = value
+
+    @property
+    def molar_mass(self):return sympy.symbols(f'M_{{{self.name}}}')
+    @molar_mass.setter
+    def molar_mass(self,value:float|None):
+        flag_check(molar_mass=value)
+        consts[self.molar_mass] = value
+
+    def __getitem__(self, substance:"Substance"):
+        if not isinstance(substance, Substance):raise TypeError("Index must be a substance")
+        if not substance in self.fractions:raise IndexError("Substance does not exist in stream")
+        return self.fractions[substance]
+
+
 class Substance():
     """
     Each substance has
@@ -181,21 +176,21 @@ class Substance():
         self.fractions = []
 
     @property
-    def molar_mass(self):return sympy.symbols(f'M_{self.name}')
+    def molar_mass(self):return sympy.symbols(f'M_{{{self.name}}}')
     @molar_mass.setter
     def molar_mass(self,value:float|None):
         flag_check(molar_mass=value)
         consts[self.molar_mass] = value
     
     @property    
-    def moles(self):return sympy.symbols(f'n_{self.name}')
+    def moles(self):return sympy.symbols(f'n_{{{self.name}}}')
     @moles.setter
     def moles(self,value:float|None):
         flag_check(moles=value)
         consts[self.moles] = value
     
     @property    
-    def mass(self):return sympy.symbols(f'm_{self.name}')
+    def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
     @mass.setter
     def mass(self,value:float|None):
         flag_check(mass=value)
@@ -243,33 +238,48 @@ class SubstanceFraction():
         )
 
     @property
-    def moles(self):return sympy.symbols(f'n_{self.name}')
+    def moles(self):return sympy.symbols(f'n_{{{self.name}}}')
     @moles.setter
     def moles(self,value:float|None):
         flag_check(moles=value)
         consts[self.moles] = value
 
     @property
-    def mass(self):return sympy.symbols(f'm_{self.name}')
+    def mass(self):return sympy.symbols(f'm_{{{self.name}}}')
     @mass.setter
     def mass(self,value:float|None):
         flag_check(mass=value)
         consts[self.mass] = value
 
     @property
-    def mole_fraction(self):return sympy.symbols(f'n%_{self.name}')
+    def mole_fraction(self):return sympy.symbols(f'n%_{{{self.name}}}')
     @mole_fraction.setter
     def mole_fraction(self,value:float|None):
         flag_check(mole_fraction=value)
         consts[self.mole_fraction] = value
 
     @property
-    def mass_fraction(self):return sympy.symbols(f'm%_{self.name}')
+    def mass_fraction(self):return sympy.symbols(f'm%_{{{self.name}}}')
     @mass_fraction.setter
     def mass_fraction(self,value:float|None):
         flag_check(mass_fraction=value)
         consts[self.mass_fraction] = value
 
+
+def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
+    """
+    Constructs the relations of a process unit
+    `name`, used for the relation
+    `in_streams`, the streams going into the process
+    `out_streams`,the streams going out of the process
+    """
+    if type(name)==int:name=f"P.{name}"
+    if type(name)!=str:raise TypeError("Process must be supplied a name or an idx")
+    if len(in_streams)==0 or len(out_streams)==0:raise ValueError("The amount of in_streams and out_streams must be non-zero")
+
+    rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
+    if rel==None:raise NotImplementedError("This is not supposed to happen?")
+    relations[name]=rel
 
 def const_print():
     """
@@ -287,9 +297,13 @@ def relations_print():
     Print the relations within each stream, in a nice way
     """
     print(" RELATIONS ".center(20,"="))
-    for key,val in relations.items():
-        if val!=None:
-            print(f"{key.ljust(20-1)}: {val}")
+    for key,rels in relations.items():
+        if rels!=None and len(rels)>0:
+            eq = rels[0]
+            print(f"{key.ljust(20-1)}: {eq.lhs} = {eq.rhs}")
+            for eq in rels[1:]:
+                print(" "*20,eq.lhs,"=",eq.rhs)
+            print()
     print("".center(20,"="))
 
 

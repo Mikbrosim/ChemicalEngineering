@@ -9,18 +9,18 @@ Ethanol = _.Substance(name="ethanol")
 Ethanol.molar_mass=46.07
 
 # Setup stream
-s0_1 = _.Stream(idx=(0,1),fractions=[Ethanol,Butanol])
-s0_1[Ethanol].mole_fraction=0.4
-s0_1.moles=4000
+s1 = _.Stream(idx=(1,),fractions=[Ethanol,Butanol])
+s1[Ethanol].mole_fraction=0.4
+s1.moles=4000
 
-s1_0_0 = _.Stream(idx=(1,0,0),fractions=[Ethanol,Butanol])
-s1_0_0[Ethanol].mole_fraction=0.98
+s2 = _.Stream(idx=(2,),fractions=[Ethanol,Butanol])
+s2[Ethanol].mole_fraction=0.98
 
-s1_0_1 = _.Stream(idx=(1,0,1),fractions=[Ethanol,Butanol])
-s1_0_1[Butanol].mole_fraction=0.98
+s3 = _.Stream(idx=(3,),fractions=[Ethanol,Butanol])
+s3[Butanol].mole_fraction=0.98
 
-# Unit 1
-_.extra_eqs += s0_1 == (s1_0_0 + s1_0_1)
+# Process 1
+_.process(name=1,in_streams=[s1],out_streams=[s2,s3])
 
 # Print eqs
 _.const_print()
@@ -33,5 +33,7 @@ assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-print(sol)
-print(sol[s1_0_1[Butanol].mass])
+print("s2[Ethanol].moles =",sol[s2[Ethanol].moles])
+print("s2[Butanol].moles =",sol[s2[Butanol].moles])
+print("s3[Ethanol].moles =",sol[s3[Ethanol].moles])
+print("s3[Butanol].moles =",sol[s3[Butanol].moles])
