@@ -101,7 +101,9 @@ class Stream(CombinedStream):
     The moles must be equal to the sum of its fractions 
     The molar_mass must be equal to the weighted average of its fractions 
     """
-    def __init__(self, idx:tuple[int]|tuple[int,int]|tuple[int,int,int], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
+    def __init__(self, idx:int|tuple[int,...], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
+        if type(idx)==int:idx=(idx,)
+        if type(idx)!=tuple:raise TypeError("idx must be either int or tuple")
         self.idx = idx
         self.name = f"S.{'.'.join(map(str,self.idx))}"
         self.fractions = {substance:SubstanceFraction(substance=substance,stream=self) for substance in fractions}

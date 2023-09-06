@@ -33,7 +33,7 @@ assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-print("s2[Ethanol].moles =",sol[s2[Ethanol].moles])
-print("s2[Butanol].moles =",sol[s2[Butanol].moles])
-print("s3[Ethanol].moles =",sol[s3[Ethanol].moles])
-print("s3[Butanol].moles =",sol[s3[Butanol].moles])
+print(f"{sol[s2[Ethanol].moles]=}")
+print(f"{sol[s2[Butanol].moles]=}")
+print(f"{sol[s3[Ethanol].moles]=}")
+print(f"{sol[s3[Butanol].moles]=}")
