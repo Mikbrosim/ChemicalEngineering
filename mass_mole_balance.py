@@ -14,7 +14,7 @@ def flag_check(mass=None,moles=None,molar_mass=None,mass_fraction=None,mole_frac
 
 consts:dict[sympy.Symbol,float|None] = {}
 relations:dict[str,list[sympy.Eq]] = {}
-extra_eqs:list[sympy.Eq]=[]
+#extra_eqs:list[sympy.Eq]=[]
 
 class CombinedSubstanceFraction():
     """
@@ -313,7 +313,7 @@ def combine_eqs():
     """
     eqs:list[sympy.Eq] = []
 
-    eqs+=extra_eqs
+    #eqs+=extra_eqs
 
     for _eqs in relations.values():
         eqs+=_eqs
