@@ -32,6 +32,8 @@ assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-print(f"{sol[s3.mass]=}")
-print(f"{sol[s3[ch3o3].mass_fraction]=}")
-print(f"{sol[s3[h2o].mass_fraction]=}")
+_.solution_print(sol,[
+    s3.mass,
+    s3[ch3o3].mass_fraction,
+    s3[h2o].mass_fraction,
+])

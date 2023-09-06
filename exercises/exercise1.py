@@ -1,12 +1,12 @@
 import mass_mole_balance as _
 _.USE_MOLES = True
-_.USE_MASS = True
+_.USE_MASS = False
 
 Butanol = _.Substance(name="1-butanol")
-Butanol.molar_mass=74.11
+#Butanol.molar_mass=74.11
 
 Ethanol = _.Substance(name="ethanol")
-Ethanol.molar_mass=46.07
+#Ethanol.molar_mass=46.07
 
 # Setup stream
 s1 = _.Stream(idx=1,fractions=[Ethanol,Butanol])
@@ -33,7 +33,9 @@ assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-print(f"{sol[s2[Ethanol].moles]=}")
-print(f"{sol[s2[Butanol].moles]=}")
-print(f"{sol[s3[Ethanol].moles]=}")
-print(f"{sol[s3[Butanol].moles]=}")
+_.solution_print(sol,[
+    s2[Ethanol].moles,
+    s2[Butanol].moles,
+    s3[Ethanol].moles,
+    s3[Butanol].moles,
+])

@@ -337,3 +337,10 @@ def solve_system(eqs) -> list[dict[sympy.Symbol,float]]:
     print(f"Found {len(sols)} solutions in {round(1000*(time.time()-t))}ms")
     print("".center(20,"="))
     return sols
+
+def solution_print(solution:dict[sympy.Symbol,float],variables:list[sympy.Symbol]):
+    """
+    Print the target variables, in a nice way
+    """
+    for var in variables:
+        print(var,"=",solution[var])

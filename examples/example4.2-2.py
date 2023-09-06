@@ -32,5 +32,7 @@ assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-print(f"{sol[s2[T].mass]=}")
-print(f"{sol[s3[B].mass]=}")
+_.solution_print(sol,[
+    s2[T].mass,
+    s3[B].mass
+])
