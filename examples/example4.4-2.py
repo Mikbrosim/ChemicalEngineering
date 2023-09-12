@@ -1,5 +1,3 @@
-# TODO AVOID OVERWRITES OF STREAMS, perhaps even make it auto assign an index, if none given
-# BUG Error if variable can not be solved for, and as such does not have a solution
 import mass_mole_balance as _
 _.USE_MOLES = False
 _.USE_MASS = True

@@ -120,6 +120,7 @@ class Stream(CombinedStream):
         self.moles = moles
         self.molar_mass = molar_mass
 
+        if self.name in relations:raise NameError(f"The idx, {idx}, provided to stream is not unique")
         relations[self.name]=[]
         if USE_MASS:relations[self.name].append(
             sympy.Eq(self.mass,sum(map(lambda fraction: fraction.mass,self.fractions.values())))
@@ -293,6 +294,7 @@ def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
 
     # Setup the equations which relate each of streams going in and out of the process
     # sum(in) = sum(out)
+    if name in relations:raise NameError(f"The name, {name}, provided to process is not unique")
     rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
     if rel==None:raise NotImplementedError("This is not supposed to happen?")
     relations[name]=rel

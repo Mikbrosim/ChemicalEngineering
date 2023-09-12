@@ -1,4 +1,3 @@
-# FIX the drawing of processes
 import mass_mole_balance as _
 _.USE_MOLES = False
 _.USE_MASS = True
