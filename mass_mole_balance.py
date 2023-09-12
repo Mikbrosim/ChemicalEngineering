@@ -362,7 +362,10 @@ def solution_print(solution:dict[sympy.Symbol,float],variables:list[sympy.Symbol
     Print the target variables, in a nice way
     """
     for var in variables:
-        print(var,"=",solution[var])
+        if var in solution:
+            print(var,"=",solution[var])
+        else:
+            print(var,"=",None)
 
 def stream_label(stream:Stream):
     if type(stream)!=Stream:raise TypeError("Can only generate stream labels for streams...")
@@ -404,6 +407,7 @@ def drawer(out_file_name:str):
         node = pydot.Node(f"node_{node_counter}",label=p_name, shape="rectangle")
         nodes[p_name] = node.get_name()
         graph.add_node(node)
+        node_counter+=1
 
     # Connect the nodes connected via streams
     connected_streams = set(in_streams.keys())&set(out_streams.keys())
