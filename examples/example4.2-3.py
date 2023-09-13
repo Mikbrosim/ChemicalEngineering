@@ -37,3 +37,9 @@ _.solution_print(sol,[
     s3[ch3o3].mass_fraction,
     s3[h2o].mass_fraction,
 ])
+
+print("\nExpected return"+"""
+m_{S3} = 350.000000000000
+m%_{S3.CH3OH} = 0.528571428571429
+m%_{S3.H2O} = 0.471428571428571
+""".rstrip())

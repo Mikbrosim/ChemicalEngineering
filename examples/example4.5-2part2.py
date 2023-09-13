@@ -47,4 +47,10 @@ sol = sols[0]
 
 _.solution_print(sol,[
     s4.mass,
+    s6.mass,
 ])
+
+print("\nExpected return"+"""
+m_{S4} = 620.034756703078
+m_{S6} = 2380.73264476599
+""".rstrip())

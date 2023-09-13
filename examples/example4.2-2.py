@@ -37,3 +37,8 @@ _.solution_print(sol,[
     s2[T].mass,
     s3[B].mass
 ])
+
+print("\nExpected return"+"""
+m_{S2.T} = 25
+m_{S3.B} = 50
+""".rstrip())

@@ -50,3 +50,9 @@ _.solution_print(sol,[
     s3.moles,
     s5.moles,
 ])
+
+print("\nExpected return"+"""
+n_{S1} = 102.395833333333
+n_{S3} = 2.39583333333333
+n_{S5} = 290.121527777778
+""".rstrip())

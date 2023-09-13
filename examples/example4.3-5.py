@@ -33,6 +33,14 @@ sol = sols[0]
 
 _.solution_print(sol,[
     s2.mass,
+    s3.mass,
     s3[B].mass_fraction,
     s3[T].mass_fraction,
 ])
+
+print("\nExpected return"+"""
+m_{S2} = 766.837630817538
+m_{S3} = 977.162369182462
+m%_{S3.B} = 0.0642513485783616
+m%_{S3.T} = 0.935748651421638
+""".rstrip())
