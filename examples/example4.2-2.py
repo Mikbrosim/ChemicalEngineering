@@ -19,7 +19,7 @@ s3 = _.Stream(idx=3,fractions=[B,T])
 s3[T].mass=475
 
 # Setup processes
-_.process(name=1,in_streams=[s1],out_streams=[s2,s3])
+_.Process(name=1,in_streams=[s1],out_streams=[s2,s3])
 
 # Print eqs
 _.const_print()

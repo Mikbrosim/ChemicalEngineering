@@ -33,9 +33,9 @@ s4[K2CrO4].mass=0.95*(s4.mass+s5.mass)
 s6 = _.Stream(idx=6,fractions=[H2O,K2CrO4])
 s6[K2CrO4].mass_fraction=0.364
 
-_.process("Combiner",in_streams=[s0,s6],out_streams=[s1])
-_.process("Evap",in_streams=[s1],out_streams=[s2,s3])
-_.process("Crystalizer",in_streams=[s3],out_streams=[s4,s5,s6])
+_.Process("Combiner",in_streams=[s0,s6],out_streams=[s1])
+_.Process("Evap",in_streams=[s1],out_streams=[s2,s3])
+_.Process("Crystalizer",in_streams=[s3],out_streams=[s4,s5,s6])
 
 # Print eqs
 _.const_print()

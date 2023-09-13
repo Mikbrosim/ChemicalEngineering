@@ -31,9 +31,9 @@ s6[B].mass_fraction=0.400
 
 s7 = _.Stream(idx=7,fractions=[A,B])
 
-_.process(name=1,in_streams=[s1],out_streams=[s2,s3])
-_.process(name=2,in_streams=[s3,s4],out_streams=[s5])
-_.process(name=3,in_streams=[s5],out_streams=[s6,s7])
+_.Process(name=1,in_streams=[s1],out_streams=[s2,s3])
+_.Process(name=2,in_streams=[s3,s4],out_streams=[s5])
+_.Process(name=3,in_streams=[s5],out_streams=[s6,s7])
 
 # Print eqs
 _.const_print()

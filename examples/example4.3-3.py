@@ -16,7 +16,7 @@ s3 = _.Stream(idx=3,fractions=[H2O,NaOH])
 s3[NaOH].mass_fraction=0.08
 
 
-_.process(name="Dilution",in_streams=[s1,s2],out_streams=[s3])
+_.Process(name="Dilution",in_streams=[s1,s2],out_streams=[s3])
 
 # Print eqs
 _.const_print()

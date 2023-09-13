@@ -10,7 +10,7 @@ USE_MOLES = False
 USE_MASS = False
 USE_VOLUME = False
 
-def flag_check(mass=None,moles=None,volume=None,molar_mass=None,density=None,mass_fraction=None,mole_fraction=None,volume_fraction=None):
+def flag_check(mass=None,moles=None,volume=None,molar_mass=None,density=None,mass_fraction=None,mole_fraction=None,volume_fraction=None,mass_concentration=None):
     if mass!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass")
     if moles!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set moles")
     if volume!=None and not USE_VOLUME:raise KeyError("USE_VOLUME must be True, to be able to set volume")
@@ -19,20 +19,22 @@ def flag_check(mass=None,moles=None,volume=None,molar_mass=None,density=None,mas
     if mass_fraction!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass_fraction")
     if mole_fraction!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set mole_fraction")
     if volume_fraction!=None and not USE_VOLUME:raise KeyError("USE_VOLUME must be True, to be able to set volume_fraction")
+    if mass_concentration!=None and not (USE_VOLUME and USE_MASS):raise KeyError("USE_MASS and USE_VOLUME must be True, to be able to set mass_concentration")
 
 
 consts:dict[str,dict[sympy.Symbol,float|None]] = {}
 relations:dict[str,list[sympy.Eq]] = {}
 processes:dict[str,tuple[list["Stream"],list["Stream"]]] = {}
-#extra_eqs:list[sympy.Eq]=[]
+extra_eqs:list[sympy.Eq]=[]
 
 class CombinedSubstanceFraction():
     """
     Acts as a combination of multiple substance fractions
     """
-    def __init__(self,moles=None,mass=None):
+    def __init__(self,moles=None,mass=None,volume=None):
         self.moles = moles
         self.mass = mass
+        self.volume = volume
 
 class CombinedStream():
     """
@@ -261,14 +263,14 @@ class SubstanceFraction():
     - `volume`, the total amount of volume in the substance
     - `name`, the name of the fraction, which is a suffix for sympy
     """
-    def __init__(self, substance:Substance, stream:Stream, mass:float|None=None, moles:float|None=None, volume:float|None=None, mole_fraction:float|None=None, mass_fraction:float|None=None, volume_fraction:float|None=None):
+    def __init__(self, substance:Substance, stream:Stream, mass:float|None=None, moles:float|None=None, volume:float|None=None, mole_fraction:float|None=None, mass_fraction:float|None=None, volume_fraction:float|None=None,mass_concentration:float|None=None):
         self.substance = substance
         self.stream = stream
 
         self.idx = self.stream.idx
         self.name = f"{stream.name}.{substance.name}"
 
-        flag_check(mass=mass,moles=moles,volume=volume,mole_fraction=mole_fraction,mass_fraction=mass_fraction,volume_fraction=volume_fraction)
+        flag_check(mass=mass,moles=moles,volume=volume,mole_fraction=mole_fraction,mass_fraction=mass_fraction,volume_fraction=volume_fraction,mass_concentration=mass_concentration)
         consts[self.name]={}
         self.moles=moles
         self.mass=mass
@@ -276,6 +278,7 @@ class SubstanceFraction():
         self.mole_fraction=mole_fraction
         self.mass_fraction=mass_fraction
         self.volume_fraction=volume_fraction
+        self.mass_concentration=mass_concentration
 
         self.substance.add_fraction(self)
 
@@ -294,6 +297,9 @@ class SubstanceFraction():
         )
         if USE_VOLUME and USE_MASS:relations[self.name].append(
             sympy.Eq(self.mass,self.volume*self.substance.density)
+        )
+        if USE_VOLUME and USE_MASS:relations[self.name].append(
+            sympy.Eq(self.mass,self.stream.volume*self.mass_concentration)
         )
 
     @property
@@ -338,28 +344,37 @@ class SubstanceFraction():
         flag_check(volume_fraction=value)
         consts[self.name][self.volume_fraction] = value
 
+    @property
+    def mass_concentration(self):return sympy.symbols(f'Cm_{{{self.name}}}')
+    @mass_concentration.setter
+    def mass_concentration(self,value:float|None):
+        flag_check(mass_concentration=value)
+        consts[self.name][self.mass_concentration] = value
 
-def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
+class Process():
     """
     Constructs the relations of a process unit
     `name`, used for the relation
     `in_streams`, the streams going into the process
     `out_streams`,the streams going out of the process
     """
-    # Make sure the function recieves the correct inputs
-    if type(name)==int:name=f"P{name}"
-    if type(name)!=str:raise TypeError("Process must be supplied a name or an idx")
-    if len(in_streams)==0 or len(out_streams)==0:raise ValueError("The amount of in_streams and out_streams must be non-zero")
+    def __init__(self, name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
+        # Make sure the function recieves the correct inputs
+        if type(name)==int:name=f"P{name}"
+        if type(name)!=str:raise TypeError("Process must be supplied a name or an idx")
+        self.name = name
+        if len(in_streams)==0 or len(out_streams)==0:raise ValueError("The amount of in_streams and out_streams must be non-zero")
 
-    # Setup the equations which relate each of streams going in and out of the process
-    # sum(in) = sum(out)
-    if name in relations:raise NameError(f"The name, {name}, provided to process is not unique")
-    rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
-    if rel==None:raise NotImplementedError("This is not supposed to happen?")
-    relations[name]=rel
+        # Setup the equations which relate each of streams going in and out of the process
+        # sum(in) = sum(out)
+        if self.name in relations:raise NameError(f"The name, {self.name}, provided to process is not unique")
+        rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
+        if rel==None:raise NotImplementedError("This is not supposed to happen?")
+        relations[self.name]=rel
 
-    # Used to construct graph, which can be drawed
-    processes[name]=(in_streams,out_streams)
+        # Used to construct graph, which can be drawed
+        processes[self.name]=(in_streams,out_streams)
+
 
 def const_print():
     """
@@ -394,7 +409,7 @@ def combine_eqs():
     """
     eqs:list[sympy.Eq] = []
 
-    #eqs+=extra_eqs
+    eqs+=extra_eqs
 
     for _eqs in relations.values():
         eqs+=_eqs

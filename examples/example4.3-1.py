@@ -22,7 +22,7 @@ s3.moles=s2.moles/5
 s4 = _.Stream(idx=4, fractions=[H2O,O2,N2])
 s4[H2O].mole_fraction=0.015
 
-_.process(name="Humidifier",in_streams=[s1,s2,s3],out_streams=[s4])
+_.Process(name="Humidifier",in_streams=[s1,s2,s3],out_streams=[s4])
 
 # Print eqs
 _.const_print()

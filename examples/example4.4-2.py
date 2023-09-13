@@ -40,10 +40,10 @@ s8[W].mass_fraction=0.01
 s9 = _.Stream(idx=9,fractions=[A,W,M])
 s10 = _.Stream(idx=10,fractions=[A,W,M])
 
-_.process(name=1,in_streams=[s1,s2],out_streams=[s3,s4])
-_.process(name=2,in_streams=[s3,s5],out_streams=[s6,s7])
-_.process(name=3,in_streams=[s4,s6],out_streams=[s10])
-_.process(name=4,in_streams=[s10],out_streams=[s8,s9])
+_.Process(name=1,in_streams=[s1,s2],out_streams=[s3,s4])
+_.Process(name=2,in_streams=[s3,s5],out_streams=[s6,s7])
+_.Process(name=3,in_streams=[s4,s6],out_streams=[s10])
+_.Process(name=4,in_streams=[s10],out_streams=[s8,s9])
 
 
 # Print eqs

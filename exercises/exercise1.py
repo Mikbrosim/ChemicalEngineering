@@ -1,4 +1,4 @@
-import mass_mole_balance as _
+import material_balance as _
 _.USE_MOLES = True
 _.USE_MASS = False
 
@@ -20,7 +20,7 @@ s3 = _.Stream(idx=3,fractions=[Ethanol,Butanol])
 s3[Butanol].mole_fraction=0.98
 
 # Process 1
-_.process(name=1,in_streams=[s1],out_streams=[s2,s3])
+_.Process(name=1,in_streams=[s1],out_streams=[s2,s3])
 
 # Print eqs
 _.const_print()

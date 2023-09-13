@@ -19,7 +19,7 @@ s2[ch3o3].mass_fraction=0.700
 s3 = _.Stream(idx=3,fractions=[ch3o3,h2o])
 
 # Setup processes
-_.process(name=1,in_streams=[s1,s2],out_streams=[s3])
+_.Process(name=1,in_streams=[s1,s2],out_streams=[s3])
 
 # Print eqs
 _.const_print()

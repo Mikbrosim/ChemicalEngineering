@@ -29,9 +29,9 @@ s6 = _.Stream(idx=6,fractions=[H2O,DA])
 s6[H2O].mole_fraction=s4[H2O].mole_fraction
 s6.moles=100
 
-_.process("Combined",in_streams=[s1,s5],out_streams=[s2])
-_.process("Air Cond",in_streams=[s2],out_streams=[s3,s4])
-_.process("Recycler",in_streams=[s4],out_streams=[s5,s6])
+_.Process("Combined",in_streams=[s1,s5],out_streams=[s2])
+_.Process("Air Cond",in_streams=[s2],out_streams=[s3,s4])
+_.Process("Recycler",in_streams=[s4],out_streams=[s5,s6])
 
 # Print eqs
 _.const_print()
