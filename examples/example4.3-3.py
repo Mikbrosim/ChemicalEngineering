@@ -1,4 +1,4 @@
-import mass_mole_balance as _
+import material_balance as _
 
 _.USE_MASS=True
 _.USE_VOLUME=True
