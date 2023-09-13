@@ -8,13 +8,17 @@ except ImportError:
 
 USE_MOLES = False
 USE_MASS = False
+USE_VOLUME = False
 
-def flag_check(mass=None,moles=None,molar_mass=None,mass_fraction=None,mole_fraction=None):
+def flag_check(mass=None,moles=None,volume=None,molar_mass=None,density=None,mass_fraction=None,mole_fraction=None,volume_fraction=None):
     if mass!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass")
     if moles!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set moles")
+    if volume!=None and not USE_VOLUME:raise KeyError("USE_VOLUME must be True, to be able to set volume")
+    if density!=None and not (USE_VOLUME and USE_MASS):raise KeyError("USE_MASS and USE_VOLUME must be True, to be able to set density")
     if molar_mass!=None and not (USE_MOLES and USE_MASS):raise KeyError("USE_MASS and USE_MOLES must be True, to be able to set molar_mass")
     if mass_fraction!=None and not USE_MASS:raise KeyError("USE_MASS must be True, to be able to set mass_fraction")
     if mole_fraction!=None and not USE_MOLES:raise KeyError("USE_MOLES must be True, to be able to set mole_fraction")
+    if volume_fraction!=None and not USE_VOLUME:raise KeyError("USE_VOLUME must be True, to be able to set volume_fraction")
 
 
 consts:dict[str,dict[sympy.Symbol,float|None]] = {}
@@ -56,8 +60,12 @@ class CombinedStream():
             zipped_vals = self.__zipped_streams(other,"mass")
             for substance,self_val,other_val in zipped_vals:
                 fracs[substance] = CombinedSubstanceFraction(mass=self_val + other_val)
+        elif USE_VOLUME:
+            zipped_vals = self.__zipped_streams(other,"volume")
+            for substance,self_val,other_val in zipped_vals:
+                fracs[substance] = CombinedSubstanceFraction(mass=self_val + other_val)
         else:
-            raise KeyError("Either USE_MOLES or USE_MASS must be True")
+            raise KeyError("Either USE_MOLES, USE_MASS or USE_VOLUME must be True")
 
         return CombinedStream(fractions=fracs)
 
@@ -85,8 +93,10 @@ class CombinedStream():
             zipped_vals = self.__zipped_streams(other,"moles")
         elif USE_MASS:
             zipped_vals = self.__zipped_streams(other,"mass")
+        elif USE_VOLUME:
+            zipped_vals = self.__zipped_streams(other,"volume")
         else:
-            raise KeyError("Either USE_MOLES or USE_MASS must be True")
+            raise KeyError("Either USE_MOLES, USE_MASS or USE_VOLUME must be True")
 
         return [sympy.Eq(self_val,other_val) for substance,self_val,other_val in zipped_vals]
 
@@ -99,7 +109,9 @@ class Stream(CombinedStream):
 
     - `mass`, the total amount of mass in the stream
     - `moles`, the total amount of moles in the stream
+    - `volume`, the total amount of volume in the stream
     - `molar_mass`, the molar_mass of the stream
+    - `density`. the density of the stream
 
     - `name`, the name of the stream, which is a suffix for sympy
 
@@ -107,7 +119,7 @@ class Stream(CombinedStream):
     The moles must be equal to the sum of its fractions 
     The molar_mass must be equal to the weighted average of its fractions 
     """
-    def __init__(self, idx:int|tuple[int,...], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
+    def __init__(self, idx:int|tuple[int,...], fractions:list["Substance"], mass:float|None=None, moles:float|None=None, volume:float|None=None, molar_mass:float|None=None):
         if type(idx)==int:idx=(idx,)
         if type(idx)!=tuple:raise TypeError("idx must be either int or tuple")
         self.idx = idx
@@ -118,6 +130,7 @@ class Stream(CombinedStream):
         consts[self.name]={}
         self.mass = mass
         self.moles = moles
+        self.volume = volume
         self.molar_mass = molar_mass
 
         if self.name in relations:raise NameError(f"The idx, {idx}, provided to stream is not unique")
@@ -127,6 +140,9 @@ class Stream(CombinedStream):
         )
         if USE_MOLES:relations[self.name].append(
             sympy.Eq(self.moles,sum(map(lambda fraction: fraction.moles,self.fractions.values())))
+        )
+        if USE_VOLUME:relations[self.name].append(
+            sympy.Eq(self.volume,sum(map(lambda fraction: fraction.volume,self.fractions.values())))
         )
         if USE_MOLES and USE_MASS:relations[self.name].append(
             sympy.Eq(self.molar_mass,sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())))
@@ -146,6 +162,13 @@ class Stream(CombinedStream):
     def mass(self,value:float|None):
         flag_check(mass=value)
         consts[self.name][self.mass] = value
+
+    @property    
+    def volume(self):return sympy.symbols(f'V_{{{self.name}}}')
+    @volume.setter
+    def volume(self,value:float|None):
+        flag_check(volume=value)
+        consts[self.name][self.volume] = value
 
     @property
     def molar_mass(self):return sympy.symbols(f'M_{{{self.name}}}')
@@ -169,22 +192,22 @@ class Substance():
 
     - `mass`, the total amount of mass in the substance
     - `moles`, the total amount of moles in the substance
+    - `volume`, the total amount of volume in the substance
     - `molar_mass`, the molar_mass of the substance
+    - `density`, the density of the substance
 
     - `fractions`, the fraction which this substance consists of
-    
-    The mass must be equal to the sum of its fractions
-    The moles must be equal to the sum of its fractions
-    The molar_mass must be equal to the weighted average of its fractions 
     """
-    def __init__(self, name, mass:float|None=None, moles:float|None=None, molar_mass:float|None=None):
+    def __init__(self, name, mass:float|None=None, moles:float|None=None, volume:float|None=None, molar_mass:float|None=None, density:float|None=None):
         self.name = name
 
         flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
         consts[self.name]={}
         self.mass = mass
         self.moles = moles
+        self.volume = volume
         self.molar_mass = molar_mass
+        self.density = density
 
         self.fractions = []
 
@@ -194,7 +217,14 @@ class Substance():
     def molar_mass(self,value:float|None):
         flag_check(molar_mass=value)
         consts[self.name][self.molar_mass] = value
-    
+
+    @property
+    def density(self):return sympy.symbols(f'p_{{{self.name}}}')
+    @density.setter
+    def density(self,value:float|None):
+        flag_check(density=value)
+        consts[self.name][self.density] = value
+
     @property    
     def moles(self):return sympy.symbols(f'n_{{{self.name}}}')
     @moles.setter
@@ -208,6 +238,13 @@ class Substance():
     def mass(self,value:float|None):
         flag_check(mass=value)
         consts[self.name][self.mass] = value
+    
+    @property    
+    def volume(self):return sympy.symbols(f'm_{{{self.name}}}')
+    @volume.setter
+    def volume(self,value:float|None):
+        flag_check(volume=value)
+        consts[self.name][self.volume] = value
 
     def add_fraction(self,fraction):
         self.fractions.append(fraction)
@@ -221,22 +258,24 @@ class SubstanceFraction():
 
     - `mass`, the mass of this fraction
     - `moles`, the amount of moles of this fraction
-    
+    - `volume`, the total amount of volume in the substance
     - `name`, the name of the fraction, which is a suffix for sympy
     """
-    def __init__(self, substance:Substance, stream:Stream, mass:float|None=None, moles:float|None=None, mole_fraction:float|None=None, mass_fraction:float|None=None):
+    def __init__(self, substance:Substance, stream:Stream, mass:float|None=None, moles:float|None=None, volume:float|None=None, mole_fraction:float|None=None, mass_fraction:float|None=None, volume_fraction:float|None=None):
         self.substance = substance
         self.stream = stream
 
         self.idx = self.stream.idx
         self.name = f"{stream.name}.{substance.name}"
 
-        flag_check(mass=mass,moles=moles,mole_fraction=mole_fraction,mass_fraction=mass_fraction)
+        flag_check(mass=mass,moles=moles,volume=volume,mole_fraction=mole_fraction,mass_fraction=mass_fraction,volume_fraction=volume_fraction)
         consts[self.name]={}
         self.moles=moles
         self.mass=mass
+        self.volume=volume
         self.mole_fraction=mole_fraction
         self.mass_fraction=mass_fraction
+        self.volume_fraction=volume_fraction
 
         self.substance.add_fraction(self)
 
@@ -247,8 +286,14 @@ class SubstanceFraction():
         if USE_MOLES:relations[self.name].append(
             sympy.Eq(self.moles,self.stream.moles*self.mole_fraction)
         )
+        if USE_VOLUME:relations[self.name].append(
+            sympy.Eq(self.volume,self.stream.volume*self.volume_fraction)
+        )
         if USE_MOLES and USE_MASS:relations[self.name].append(
             sympy.Eq(self.mass,self.moles*self.substance.molar_mass)
+        )
+        if USE_VOLUME and USE_MASS:relations[self.name].append(
+            sympy.Eq(self.mass,self.volume*self.substance.density)
         )
 
     @property
@@ -264,6 +309,13 @@ class SubstanceFraction():
     def mass(self,value:float|None):
         flag_check(mass=value)
         consts[self.name][self.mass] = value
+
+    @property
+    def volume(self):return sympy.symbols(f'V_{{{self.name}}}')
+    @volume.setter
+    def volume(self,value:float|None):
+        flag_check(volume=value)
+        consts[self.name][self.volume] = value
 
     @property
     def mole_fraction(self):return sympy.symbols(f'n%_{{{self.name}}}')
@@ -278,6 +330,13 @@ class SubstanceFraction():
     def mass_fraction(self,value:float|None):
         flag_check(mass_fraction=value)
         consts[self.name][self.mass_fraction] = value
+
+    @property
+    def volume_fraction(self):return sympy.symbols(f'V%_{{{self.name}}}')
+    @volume_fraction.setter
+    def volume_fraction(self,value:float|None):
+        flag_check(volume_fraction=value)
+        consts[self.name][self.volume_fraction] = value
 
 
 def process(name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
