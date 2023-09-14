@@ -1,8 +1,14 @@
 import sympy
 import time
+import os
+
+DOT_PATH = "./Graphviz/bin"
 
 try:
     import pydot
+    delimiter = ":" if os.name == "posix" else ";"
+    if os.path.abspath(DOT_PATH) not in os.environ.get("PATH", "").split(delimiter):
+        os.environ["PATH"] = os.environ.get("PATH", "") + delimiter + os.path.abspath(DOT_PATH)
 except ImportError:
     pydot = None
 
