@@ -10,13 +10,12 @@ Examples of a few material balances can be seen in [Examples](/examples). And an
 
 # Installation
 ## Windows
-Click [here](https://github.com/Mikbrosim/ChemicalEngineering/archive/refs/heads/main.zip) to download the lastest version as a zip file
-Then extract the zipfile into your chosen location
-Execute the `graphviz_install.ps1`, which should install `graphviz` alongside `pydot` and `sympy` if they are not installed already
-
+1. Click [here](https://github.com/Mikbrosim/ChemicalEngineering/archive/refs/heads/main.zip) to download the lastest version as a zip file
+2. Extract the zipfile into your chosen location
+3. Execute the `graphviz_install.ps1`, which should install `graphviz` alongside `pydot` and `sympy` if they are not installed already
 
 ## Linux
-You'll figure it out! 😁
+1. You'll figure it out! 😁
 
 # Usage
 Coming ... sometime
