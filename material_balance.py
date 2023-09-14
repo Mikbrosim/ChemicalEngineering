@@ -422,12 +422,39 @@ def combine_eqs():
     return eqs
 
 
-def solve_system(eqs) -> list[dict[sympy.Symbol,float]]: 
+def solve_system(eqs:list[sympy.Eq],target_vars:None|list[sympy.Symbol]=None) -> list[dict[sympy.Symbol,float]]: 
     """
     Returns the solutions to the system
     """
     t=time.time()
     print(" SOLVING ".center(20,"="))
+    if target_vars!=None:
+        eqs_len = len(eqs)
+        for i in range(len(eqs)):
+            reduced = False
+
+            # Count the number of occurrences of each symbol in the eqs 
+            occs:dict[sympy.Symbol,int] = dict()
+            for eq in eqs:
+                for sym in eq.free_symbols:
+                    if isinstance(sym,sympy.Symbol):
+                        occs[sym]=occs.get(sym,0)+1
+
+            # Mark the symbols only occurring once, as not needed, if they are not apart of the variables we are looking ofr
+            not_needed:set[sympy.Symbol] = set()
+            for sym,val in occs.items():
+                if val == 1 and sym not in target_vars:
+                    not_needed.add(sym)
+
+            # Remove the equations, which contains symbols which are neither the target nor an intermediate
+            for eq in eqs:
+                if len(eq.free_symbols & not_needed)>0:
+                    eqs.remove(eq)
+                    reduced=True
+            if not reduced:break
+
+        print(f"Removed {eqs_len-len(eqs)} unnecessary equations")
+    print(f"Solving system of {len(eqs)} equations with {len(set(sum((list(eq.free_symbols) for eq in eqs),start=list())))} unknowns")
     sols = sympy.solve(eqs,domain=sympy.Reals,manual=True)
     print(f"Found {len(sols)} solutions in {round(1000*(time.time()-t))}ms")
     print("".center(20,"="))

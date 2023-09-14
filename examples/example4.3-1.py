@@ -1,4 +1,3 @@
-# FIX This has a lot of solutions, and takes a lot of time to solve
 import material_balance as _
 
 _.USE_MASS=True
@@ -30,13 +29,7 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
-eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
-assert len(sols)!=0,"No solutions found"
-#assert len(sols)==1,"Multiple solutions found"
-sol = sols[0]
-
-_.solution_print(sol,[
+target_vars = [
     s1.moles,
     s2.moles,
     s3.moles,
@@ -44,7 +37,14 @@ _.solution_print(sol,[
     s4[N2].mole_fraction,
     s4[O2].mole_fraction,
     s4[H2O].mole_fraction,
-])
+]
+eqs = _.combine_eqs()
+sols = _.solve_system(eqs,target_vars=target_vars)
+assert len(sols)!=0,"No solutions found"
+assert len(sols)==1,"Multiple solutions found"
+sol = sols[0]
+
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 n_{S1} = 1.10987791342952

@@ -39,17 +39,18 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
+target_vars = [
+    s1.moles,
+    s3.moles,
+    s5.moles,
+]
 eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
+sols = _.solve_system(eqs,target_vars=target_vars)
 assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-_.solution_print(sol,[
-    s1.moles,
-    s3.moles,
-    s5.moles,
-])
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 n_{S1} = 102.395833333333

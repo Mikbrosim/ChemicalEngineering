@@ -52,13 +52,7 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
-eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
-assert len(sols)!=0,"No solutions found"
-assert len(sols)==1,"Multiple solutions found"
-sol = sols[0]
-
-_.solution_print(sol,[
+target_vars = [
     s3.mass,
     s3[A].mass_fraction,
     s3[W].mass_fraction,
@@ -83,7 +77,14 @@ _.solution_print(sol,[
     s9[A].mass_fraction,
     s9[W].mass_fraction,
     s9[M].mass_fraction,
-])
+]
+eqs = _.combine_eqs()
+sols = _.solve_system(eqs,target_vars=target_vars)
+assert len(sols)!=0,"No solutions found"
+assert len(sols)==1,"Multiple solutions found"
+sol = sols[0]
+
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 m_{S3} = 54.8935135135135

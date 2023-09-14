@@ -41,13 +41,7 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
-eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
-assert len(sols)!=0,"No solutions found"
-assert len(sols)==1,"Multiple solutions found"
-sol = sols[0]
-
-_.solution_print(sol,[
+target_vars = [
     s3.mass,
     s3[A].mass_fraction,
     s3[B].mass_fraction,
@@ -57,7 +51,14 @@ _.solution_print(sol,[
     s7.mass,
     s7[A].mass_fraction,
     s7[B].mass_fraction,
-])
+]
+eqs = _.combine_eqs()
+sols = _.solve_system(eqs,target_vars=target_vars)
+assert len(sols)!=0,"No solutions found"
+assert len(sols)==1,"Multiple solutions found"
+sol = sols[0]
+
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 m_{S3} = 60.0000000000000

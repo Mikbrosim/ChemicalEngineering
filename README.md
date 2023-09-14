@@ -8,6 +8,6 @@ Examples of a few mass and mole balances can be seen in [Examples](/examples). A
 
 ![drawing of example4.2-2](/examples/example4.2-2.png)
 
-
-# TODO. The rejection factor can be diferrent per compound, implement membrane with such capabilities
-# concentration
+# Determine which eqations are important by drawing a graph, and traversing it.
+# With directions being dependent on which variables are required to find the current one.
+# So one node per variable, and then a directional edge from the required variables/nodes

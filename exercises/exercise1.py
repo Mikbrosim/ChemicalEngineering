@@ -27,15 +27,16 @@ _.const_print()
 _.relations_print()
 
 # Solve
-eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
-assert len(sols)!=0,"No solutions found"
-assert len(sols)==1,"Multiple solutions found"
-sol = sols[0]
-
-_.solution_print(sol,[
+target_vars = [
     s2[Ethanol].moles,
     s2[Butanol].moles,
     s3[Ethanol].moles,
     s3[Butanol].moles,
-])
+]
+eqs = _.combine_eqs()
+sols = _.solve_system(eqs,target_vars=target_vars)
+assert len(sols)!=0,"No solutions found"
+assert len(sols)==1,"Multiple solutions found"
+sol = sols[0]
+
+_.solution_print(sol,target_vars)

@@ -39,16 +39,17 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
+target_vars = [
+    s4.mass,
+    s6.mass,
+]
 eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
+sols = _.solve_system(eqs,target_vars=target_vars)
 assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-_.solution_print(sol,[
-    s4.mass,
-    s6.mass,
-])
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 m_{S4} = 620.034756703078

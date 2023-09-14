@@ -27,16 +27,17 @@ _.relations_print()
 _.drawer(__file__.replace("py","png"))
 
 # Solve
+target_vars = [
+    s2[biomass].mass_concentration,
+    s3[biomass].mass_concentration,
+]
 eqs = _.combine_eqs()
-sols = _.solve_system(eqs)
+sols = _.solve_system(eqs,target_vars=target_vars)
 assert len(sols)!=0,"No solutions found"
 assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
-_.solution_print(sol,[
-    s2[biomass].mass_concentration,
-    s3[biomass].mass_concentration,
-])
+_.solution_print(sol,target_vars)
 
 print("\nExpected return"+"""
 Cm_{S2.Bio} = 147.600000000000
