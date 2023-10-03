@@ -1,4 +1,5 @@
 from sympy import symbols as variable
+from typing import Literal
 import sympy
 import time
 import os
@@ -34,6 +35,7 @@ relations:dict[str,list[sympy.Eq]] = {}
 processes:dict[str,tuple[list["Stream"],list["Stream"]]] = {}
 extra_eqs:list[sympy.Eq]=[]
 
+
 class CombinedSubstanceFraction():
     """
     Acts as a combination of multiple substance fractions
@@ -43,21 +45,22 @@ class CombinedSubstanceFraction():
         self.mass = mass
         self.volume = volume
 
+
 class CombinedStream():
     """
     Acts as a combination of multiple streams
     """
-    def __init__(self,fractions):
+    def __init__(self, fractions:dict["Substance","SubstanceFraction|CombinedSubstanceFraction"]={}):
         self.fractions = fractions
 
-    def __zipped_streams(self,other,key):
+    def __zipped_streams(self, other,key):
         substances = set(list(self.fractions.keys())+list(other.fractions.keys()))
         for substance in substances:
             self_val:int = getattr(self.fractions.get(substance),key,0)
             other_val:int = getattr(other.fractions.get(substance),key,0)
             yield substance,self_val,other_val
 
-    def __add__(self,other:"Stream|CombinedStream"):
+    def __add__(self, other:"Stream|CombinedStream"):
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
         fracs:dict["Substance","SubstanceFraction|CombinedSubstanceFraction"]={}
 
@@ -78,24 +81,7 @@ class CombinedStream():
 
         return CombinedStream(fractions=fracs)
 
-    def __sub__(self,other:"Stream|CombinedStream"):
-        raise NotImplementedError()
-        if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
-
-        if USE_MOLES:
-            zipped_vals = self.__zipped_streams(other,"moles")
-            for substance,self_val,other_val in zipped_vals:
-                fracs[substance] = CombinedSubstanceFraction(moles=self_val - other_val)
-        elif USE_MASS:
-            zipped_vals = self.__zipped_streams(other,"mass")
-            for substance,self_val,other_val in zipped_vals:
-                fracs[substance] = CombinedSubstanceFraction(mass=self_val - other_val)
-        else:
-            raise KeyError("Either USE_MOLES or USE_MASS must be True")
-
-        return CombinedStream(fractions=fracs)
-
-    def __eq__(self,other:"Stream|CombinedStream"):
+    def __eq__(self, other:"Stream|CombinedStream"):
         if not isinstance(other, (Stream,CombinedStream)):raise TypeError("Other must also be a Stream")
 
         if USE_MOLES:
@@ -194,6 +180,7 @@ class Stream(CombinedStream):
     def __hash__(self):
         return int.from_bytes(self.name.encode())
 
+
 class Substance():
     """
     Each substance has
@@ -207,7 +194,7 @@ class Substance():
 
     - `fractions`, the fraction which this substance consists of
     """
-    def __init__(self, name, mass:float|None=None, moles:float|None=None, volume:float|None=None, molar_mass:float|None=None, density:float|None=None):
+    def __init__(self, name:str, mass:float|None=None, moles:float|None=None, volume:float|None=None, molar_mass:float|None=None, density:float|None=None):
         self.name = name
 
         flag_check(mass=mass,moles=moles,molar_mass=molar_mass)
@@ -358,6 +345,55 @@ class SubstanceFraction():
         flag_check(mass_concentration=value)
         consts[self.name][self.mass_concentration] = value
 
+
+class CombinedReaction():
+    def __init__(self, reactants=CombinedStream(), products=CombinedStream()):
+        self.reactants = reactants
+        self.products = products
+
+    def __add__(self, other:"Reaction|CombinedReaction"):
+        if not isinstance(other, (Reaction,CombinedReaction)):raise TypeError("Other must also be a Reaction")
+        return CombinedReaction(reactants=self.reactants+other.reactants, products=self.products+other.products)
+
+
+class Reaction(CombinedReaction):
+    def __init__(self, name:str|int, reactants:dict[Substance,int|float], products:dict[Substance,int|float]):
+        if type(name)==int:name=f"R{name}"
+        if type(name)!=str:raise TypeError("Reaction must be supplied a name or an idx")
+        self.name = name
+        if len(reactants)==0 or len(products)==0:raise ValueError("The amount of reactants and products must be non-zero")
+        if len(set(reactants)&set(products))!=0:raise ValueError("reactants must not be in products")
+
+        if not USE_MOLES:
+            raise KeyError("USE_MOLES must be True")
+
+        self.reactants = CombinedStream({
+            substance:CombinedSubstanceFraction(moles=sympy.symbols(f"n_{{{self.name}.{substance.name}}}"))
+        for substance in reactants})
+
+        self.products = CombinedStream({
+            substance:CombinedSubstanceFraction(moles=sympy.symbols(f"n_{{{self.name}.{substance.name}}}"))
+        for substance in products})
+
+        relations[self.name]=[]
+        for substance,v in reactants.items():
+            relations[self.name].append(
+                sympy.Eq(self.extent*v, self.reactants.fractions[substance].moles)
+            )
+
+        for substance,v in products.items():
+            relations[self.name].append(
+                sympy.Eq(self.extent*v, self.products.fractions[substance].moles)
+            )
+
+    @property
+    def extent(self):return sympy.symbols(f'E_{{{self.name}}}')
+    @extent.setter
+    def extent(self,value:float|None):
+        flag_check(moles=value)
+        consts[self.name][self.extent] = value
+
+
 class Process():
     """
     Constructs the relations of a process unit
@@ -365,7 +401,7 @@ class Process():
     `in_streams`, the streams going into the process
     `out_streams`,the streams going out of the process
     """
-    def __init__(self, name:str|int,in_streams:list[Stream],out_streams:list[Stream]):
+    def __init__(self, name:str|int, in_streams:list[Stream], out_streams:list[Stream], reactions:list[Reaction]=[]):
         # Make sure the function recieves the correct inputs
         if type(name)==int:name=f"P{name}"
         if type(name)!=str:raise TypeError("Process must be supplied a name or an idx")
@@ -374,10 +410,17 @@ class Process():
         if len(set(in_streams)&set(out_streams))!=0:raise ValueError("in_streams must not be in out_streams")
 
         # Setup the equations which relate each of streams going in and out of the process
-        # sum(in) = sum(out)
+        _reactions = sum(reactions,start=CombinedReaction())
+
+        _in = sum(in_streams,start=CombinedStream({}))
+        _generated = _reactions.products
+        _out = sum(out_streams,start=CombinedStream({}))
+        _consumed = _reactions.reactants
+
         if self.name in relations:raise NameError(f"The name, {self.name}, provided to process is not unique")
-        rel = sum(in_streams,start=CombinedStream({}))==sum(out_streams,start=CombinedStream({}))
+        rel = _in + _generated == _out + _consumed
         if rel==None:raise NotImplementedError("This is not supposed to happen?")
+        print(list(map(lambda x: x.name,_generated.fractions)))
         relations[self.name]=rel
 
         # Used to construct graph, which can be drawed
@@ -429,6 +472,7 @@ def combine_eqs():
 
     return eqs
 
+
 def reduce_equations(eqs:list[sympy.Eq],target_vars:list[sympy.Symbol]):
     eqs_len = len(eqs)
     for i in range(len(eqs)):
@@ -457,6 +501,7 @@ def reduce_equations(eqs:list[sympy.Eq],target_vars:list[sympy.Symbol]):
     print(f"Removed {eqs_len-len(eqs)} unnecessary equations")
     return eqs
 
+
 def solve_system(eqs:list[sympy.Eq],target_vars:None|list[sympy.Symbol]=None) -> list[dict[sympy.Symbol,float]]: 
     """
     Returns the solutions to the system
@@ -471,6 +516,7 @@ def solve_system(eqs:list[sympy.Eq],target_vars:None|list[sympy.Symbol]=None) ->
     print("".center(20,"="))
     return sols
 
+
 def solution_print(solution:dict[sympy.Symbol,float],variables:list[sympy.Symbol]):
     """
     Print the target variables, in a nice way
@@ -480,6 +526,9 @@ def solution_print(solution:dict[sympy.Symbol,float],variables:list[sympy.Symbol
             print(var,"=",solution[var])
         else:
             print(var,"=",None)
+    for var,val in solution.items():
+        if isinstance(val,(sympy.core.numbers.Float,sympy.core.numbers.Integer)) and val<0:print(f"Warning: {var}={val}<0")
+
 
 def stream_label(stream:Stream):
     if type(stream)!=Stream:raise TypeError("Can only generate stream labels for streams...")
@@ -497,6 +546,7 @@ def stream_label(stream:Stream):
 
     label = "\n".join(stream_consts+fraction_consts+[stream.name])
     return label
+
 
 def drawer(out_file_name:str):
     if pydot==None:raise ImportError("the package pydot must be installed, in order to use this feature")

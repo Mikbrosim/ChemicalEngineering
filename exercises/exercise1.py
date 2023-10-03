@@ -40,3 +40,10 @@ assert len(sols)==1,"Multiple solutions found"
 sol = sols[0]
 
 _.solution_print(sol,target_vars)
+
+print("\nExpected return"+"""
+n_{S2.ethanol} = 1551.66666666667
+n_{S2.1-butanol} = 31.6666666666667
+n_{S3.ethanol} = 48.3333333333333
+n_{S3.1-butanol} = 2368.33333333333
+""".rstrip())
