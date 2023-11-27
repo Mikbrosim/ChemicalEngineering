@@ -1,14 +1,24 @@
-import tkinter as tk
-from PIL import Image, ImageTk, ImageGrab
-tk.Canvas.create_circle = lambda self, x, y, r, **kwargs:self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
+lib = None
+try:
+    lib = "tkinter"
+    import tkinter as tk
+    lib = "pillow"
+    from PIL import Image, ImageTk, ImageGrab
+except ImportError:
+    print(f"[!] Could not import {lib}")
+    print(f"[.] To install it, run the following command 'pip install {lib}'")
+    print(f"[.] If pip is not installed already, make sure to run 'python -m ensurepip --upgrade' first")
+    input(f"[?] Press enter to close")
+    exit()
+
+_create_circle = lambda self, x, y, r, **kwargs:self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
 img_name = "file.png"
-xD = 0.90
-zF = 0.46
-xB = 0.24
+xD = 0.98
+zF = 0.40
+xB = 0.02
 q = 0.5
-R = None
-R_relation = 1.3
+R_relation = 1.4
 # R = R_relation * R_min
 
 BORDER_COLOR = "black"
@@ -28,14 +38,14 @@ TRAY_LINE_COLOR = "magenta"
 TRAY_LINE_SIZE = 4
 
 class main:
-    def __init__(self,fname,xD=float|int|None,zF=float|int|None,xB=float|int|None,q=float|int|None,R=float|int|None):
+    def __init__(self,fname,xD:float|int,zF:float|int,xB:float|int,q:float|int,R_relation:float|int):
         self.xD = xD
         self.zF = zF
         self.xB = xB
         self.q = q
-        self.R = R
+        self.R_relation = R_relation
 
-         # Setup gui, with image
+        # Setup gui, with image
         self.root = tk.Tk()
         self.img = ImageTk.PhotoImage(Image.open(fname))
         self.root.geometry(f"{self.img.width()}x{self.img.height()}")
@@ -60,10 +70,10 @@ class main:
         self.graph_max_y = 1
         
         # Intersect between the lines
-        self.q_intersect = None
-        self.r_intersect = None
+        self.q_intersect = (None,None,None)
+        self.r_intersect = (None,None,None)
 
-        self.trays = []
+        self.trays:list[tuple[int|float,int|float,int,int]] = []
 
         # Make it stop upon script stop
         check = lambda:self.root.after(500, check)
@@ -88,7 +98,7 @@ class main:
         ImageGrab.grab().crop((x,y,x1,y1)).save(fname)
 
     def left_click(self,event:tk.Event):
-        print(event)
+        #print(event)
         if not isinstance(event.widget,tk.Canvas):return
         match self.state:
             case "STATE_DRAWING_BOUNDING_BOX":
@@ -97,7 +107,7 @@ class main:
 
                 # Draw circle
                 canvas = event.widget
-                circle = canvas.create_circle(event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                circle = _create_circle(canvas,event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
                 self.bounding_box.append((event.x,event.y,circle))
 
                 # If both circles are drawn, connect them with lines
@@ -120,27 +130,26 @@ class main:
                 self.box_max_y = max(self.bounding_box,key=lambda _:_[1])[1]
             case "STATE_DRAWING_Q":
                 # If all made, switch to next state
-                if self.q_intersect!=None:return
+                if self.q_intersect[0] != None:return
 
                 # Draw circle
                 canvas = event.widget
-                circle = canvas.create_circle(event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                circle = _create_circle(canvas,event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
                 self.q_intersect = (event.x,event.y,circle)
 
                 x,y = self.graph_to_box(self.zF,self.zF)
                 self.q_line = canvas.create_line(x,y,event.x,event.y,width=Q_LINE_SIZE,fill=Q_LINE_COLOR)
             case "STATE_DRAWING_R":
-                if self.R == None:
-                    # If all made, switch to next state
-                    if self.r_intersect!=None:return
+                # If all made, switch to next state
+                if self.r_intersect[0] != None:return
 
-                    # Draw circle
-                    canvas = event.widget
-                    circle = canvas.create_circle(event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
-                    self.r_intersect = (event.x,event.y,circle)
+                # Draw circle
+                canvas = event.widget
+                circle = _create_circle(canvas,event.x,event.y,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                self.r_intersect = (event.x,event.y,circle)
 
-                    x,y = self.graph_to_box(self.xD,self.xD)
-                    self.r_line = canvas.create_line(x,y,event.x,event.y,width=R_LINE_SIZE,fill=R_LINE_COLOR)
+                x,y = self.graph_to_box(self.xD,self.xD)
+                self.r_line = canvas.create_line(x,y,event.x,event.y,width=R_LINE_SIZE,fill=R_LINE_COLOR)
             case "STATE_DRAWING_TRAYS":
                 canvas = event.widget
 
@@ -148,6 +157,7 @@ class main:
                 new_val_x,_ = self.box_to_graph(event.x,0) 
 
                 r_x,r_y,_ = self.r_intersect
+                assert isinstance(r_x,(int,float))
                 if event.x>r_x:
                     # We are on the r line
                     new_val_y = new_val_x*self.R/(self.R+1) + self.xD/(self.R+1)
@@ -175,7 +185,7 @@ class main:
 
 
     def right_click(self,event:tk.Event):
-        print(event)
+        #print(event)
         if not isinstance(event.widget,tk.Canvas):return
         match self.state:
             case "STATE_DRAWING_BOUNDING_BOX":
@@ -188,20 +198,19 @@ class main:
                     canvas.delete(line)
                 self.bounding_box_lines=[]
             case "STATE_DRAWING_Q":
-                if self.q_intersect == None:return
+                if self.q_intersect[0] == None:return
                 x,y,circle = self.q_intersect
                 canvas = event.widget
                 canvas.delete(circle)
                 canvas.delete(self.q_line)
-                self.q_intersect = None
+                self.q_intersect = (None,None,None)
             case "STATE_DRAWING_R":
-                if self.R == None:
-                    if self.r_intersect == None:return
-                    x,y,circle = self.r_intersect
-                    canvas = event.widget
-                    canvas.delete(circle)
-                    canvas.delete(self.r_line)
-                    self.r_intersect = None
+                if self.r_intersect[0] == None:return
+                x,y,circle = self.r_intersect
+                canvas = event.widget
+                if circle!=None:canvas.delete(circle)
+                canvas.delete(self.r_line)
+                self.r_intersect = (None,None,None)
             case "STATE_DRAWING_TRAYS":
                 if len(self.trays)<2:return
                 canvas = event.widget
@@ -216,7 +225,7 @@ class main:
 
 
     def keydown(self,event:tk.Event):
-        print(event)
+        #print(event)
         match event.keysym:
             case "Return":
                 match self.state:
@@ -225,13 +234,13 @@ class main:
                         self.state = "STATE_DRAWING_Q"
                         if isinstance(self.xD,(float,int)):
                             x,y = self.graph_to_box(self.xD,self.xD)
-                            self.canvas.create_circle(x,y,POINTER_SIZE,fill=R_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                            _create_circle(self.canvas,x,y,POINTER_SIZE,fill=R_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
                         if isinstance(self.zF,(float,int)):
                             x,y = self.graph_to_box(self.zF,self.zF)
-                            self.canvas.create_circle(x,y,POINTER_SIZE,fill=Q_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                            _create_circle(self.canvas,x,y,POINTER_SIZE,fill=Q_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
                         if isinstance(self.xB,(float,int)):
                             x,y = self.graph_to_box(self.xB,self.xB)
-                            self.canvas.create_circle(x,y,POINTER_SIZE,fill=S_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
+                            _create_circle(self.canvas,x,y,POINTER_SIZE,fill=S_LINE_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
                         if isinstance(self.q,(float,int)):
                             if self.q == 0: # Horizontal
                                 x1 = self.graph_min_x
@@ -254,7 +263,7 @@ class main:
                             self.temp_line = self.canvas.create_line(x1,y1,x2,y2,fill=GUIDE_LINE_COLOR,dash=True,width=GUIDE_LINE_SIZE)
 
                     case "STATE_DRAWING_Q":
-                        if self.q_intersect == None:return
+                        if self.q_intersect[0] == None:return
                         if not isinstance(self.xD,(float,int)):
                             print("xD required")
                             return
@@ -266,50 +275,44 @@ class main:
                         self.temp_line = self.canvas.create_line(x1,y1,x2,y2,fill=GUIDE_LINE_COLOR,dash=True,width=GUIDE_LINE_SIZE)
 
                     case "STATE_DRAWING_R":
-                        if self.R == None:
-                            if self.r_intersect == None:return
-                            self.canvas.delete(self.temp_line)
-                            x1,y1,circle = self.r_intersect
-                            self.canvas.delete(circle)
-                            x1,y1 = self.box_to_graph(x1,y1)
-                            x2,y2 = self.xD,self.xD
+                        if self.r_intersect[0] == None:return
+                        self.canvas.delete(self.temp_line)
+                        x1,y1,circle = self.r_intersect
+                        if circle!=None:self.canvas.delete(circle)
+                        x1,y1 = self.box_to_graph(x1,y1)
+                        x2,y2 = self.xD,self.xD
 
-                            self.screenshot(self.canvas,"r_min.png")
-                            self.canvas.delete(self.r_line)
+                        self.screenshot(self.canvas,"r_min.png")
+                        self.canvas.delete(self.r_line)
 
-                            a = (y1-y2)/(x1-x2)
-                            R_min = -a/(a-1)
-                            self.R = R_relation * R_min
-                            
-                            print("x1 =",x1)
-                            print("y1 =",y1)
-                            print("x2 =",x2)
-                            print("y2 =",y2)
-                            print("a =",a)
-                            print("R_min =",R_min)
-                            print("R =",self.R)
+                        a = (y1-y2)/(x1-x2)
+                        R_min = -a/(a-1)
+                        self.R = self.R_relation * R_min
+                        
+                        print("x1 =",x1)
+                        print("y1 =",y1)
+                        print("x2 =",x2)
+                        print("y2 =",y2)
+                        print("a =",a)
+                        print("R_min =",R_min)
+                        print("R =",self.R)
 
                         self.state = "STATE_DRAWING_TRAYS"
                         x = (self.xD*(self.q-1) + self.zF*(self.R+1))/(self.q+self.R)
                         y = x*self.R/(self.R+1) + self.xD/(self.R+1)
                         x1,y1 = self.graph_to_box(x,y)
                         x2,y2 = self.graph_to_box(self.xD,self.xD)
+                        self.r_intersect = (x1,y1,None)
 
                         a = (self.xB-y)/(self.xB-x)
                         self.vB = 1/(a-1)
 
-                        # Draw circle
-                        """
-                        circle = self.canvas.create_circle(x1,y1,POINTER_SIZE,fill=POINTER_COLOR, outline=POINTER_BORDER_COLOR, width=POINTER_BORDER_SIZE)
-                        self.r_intersect = (x1,y1,circle)
-                        self.canvas.delete(circle)
-                        """
                         self.r_line = self.canvas.create_line(x1,y1,x2,y2,width=R_LINE_SIZE,fill=R_LINE_COLOR)
 
                         x2,y2 = self.graph_to_box(self.xB,self.xB)
                         self.s_line = self.canvas.create_line(x1,y1,x2,y2,width=S_LINE_SIZE,fill=S_LINE_COLOR)
                         
-                        self.trays = [(self.xD,self.xD,0.0,0.0)]
+                        self.trays = [(self.xD,self.xD,0,0)]
                         x1,y1 = self.graph_to_box(self.graph_min_x,self.xD)
                         x2,y2 = self.graph_to_box(self.graph_max_x,self.xD)
                         self.temp_line = self.canvas.create_line(x1,y1,x2,y2,fill=GUIDE_LINE_COLOR,dash=True,width=GUIDE_LINE_SIZE)
@@ -337,4 +340,4 @@ class main:
         y+=self.graph_min_y
 
         return (x,y)
-main(img_name,xD,zF,xB,q,R)
+main(img_name,xD,zF,xB,q,R_relation)

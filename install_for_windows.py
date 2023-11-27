@@ -21,5 +21,5 @@ with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
 # Clean up: remove the downloaded zip file (optional)
 os.remove(zip_filename)
 
-# Install the sympy and pydot packages using pip
-os.system("python -m pip install sympy pydot")
+# Install the required packages using pip
+os.system("python -m pip install sympy pydot pillow tkinter")
