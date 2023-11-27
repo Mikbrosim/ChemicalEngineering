@@ -133,12 +133,21 @@ class Stream(CombinedStream):
         if USE_MASS:relations[self.name].append(
             sympy.Eq(self.mass,sum(map(lambda fraction: fraction.mass,self.fractions.values())))
         )
+        #if USE_MASS:relations[self.name].append(
+        #    sympy.Eq(1,sum(map(lambda fraction: fraction.mass_fraction,self.fractions.values())))
+        #)
         if USE_MOLES:relations[self.name].append(
             sympy.Eq(self.moles,sum(map(lambda fraction: fraction.moles,self.fractions.values())))
         )
+        #if USE_MOLES:relations[self.name].append(
+        #    sympy.Eq(1,sum(map(lambda fraction: fraction.mole_fraction,self.fractions.values())))
+        #)
         if USE_VOLUME:relations[self.name].append(
             sympy.Eq(self.volume,sum(map(lambda fraction: fraction.volume,self.fractions.values())))
         )
+        #if USE_VOLUME:relations[self.name].append(
+        #    sympy.Eq(1,sum(map(lambda fraction: fraction.volume_fraction,self.fractions.values())))
+        #)
         if USE_MOLES and USE_MASS:relations[self.name].append(
             sympy.Eq(self.molar_mass,sum(map(lambda fraction: fraction.substance.molar_mass*fraction.mole_fraction,self.fractions.values())))
         )
