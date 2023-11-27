@@ -14,6 +14,7 @@ Afterwhich running the [script](/mccabe_thiele_method.py) results in a gui which
 When the script is done, there should now be generated two files, one for the R_min drawing and one for the tray drawing. Along side this, it prints some relevant data for calculation of R_min, in the console.
 
 Example of a tray drawing can be seen below
+
 ![drawing of trays](/examples/trays.png)
 
 # Installation of everything
