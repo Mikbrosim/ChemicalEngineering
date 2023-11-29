@@ -107,10 +107,10 @@ class main:
         
         # Adjust for windows scaling
         scale = ctypes.windll.shcore.GetScaleFactorForDevice(0)/100
-        x//=scale
-        y//=scale
-        x1//=scale
-        y1//=scale
+        x*=scale
+        y*=scale
+        x1*=scale
+        y1*=scale
 
         # Take the screenshot
         ImageGrab.grab().crop((int(x),int(y),int(x1),int(y1))).save(fname)
