@@ -98,6 +98,9 @@ class main:
         self._state=val
 
     def screenshot(self,widget,fname):
+        # Adjust file name
+        fname = os.path.join(os.path.dirname(__file__),fname)
+        
         # Find the coordinates
         widget.update()
         x=self.root.winfo_rootx()+widget.winfo_x()
