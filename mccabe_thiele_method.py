@@ -17,10 +17,10 @@ except ImportError:
 _create_circle = lambda self, x, y, r, **kwargs:self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
 img_name = "file.png"
-xD = 0.98
-zF = 0.40
-xB = 0.02
-q = 0.5
+xD = 0.75
+zF = 0.50
+xB = 0.25
+q = 0.75
 R_relation = 1.4
 # R = R_relation * R_min
 decimals = 2
@@ -275,9 +275,9 @@ class main:
                                 y2 = self.graph_max_y
                             else: # Other
                                 x1 = self.graph_min_x
-                                y1 = x1*q/(q-1) - (self.zF)/(self.q-1)
+                                y1 = x1*self.q/(self.q-1) - (self.zF)/(self.q-1)
                                 x2 = self.graph_max_x
-                                y2 = x2*q/(q-1) - (self.zF)/(self.q-1)
+                                y2 = x2*self.q/(self.q-1) - (self.zF)/(self.q-1)
 
                             x1,y1 = self.graph_to_box(x1,y1)
                             x2,y2 = self.graph_to_box(x2,y2)
