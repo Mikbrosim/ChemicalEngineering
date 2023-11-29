@@ -1,6 +1,7 @@
 lib = None
 try:
     import os
+    import ctypes
     lib = "tkinter"
     import tkinter as tk
     from tkinter import messagebox,filedialog
@@ -51,7 +52,10 @@ class main:
 
         # Setup gui, with image
         self.root = tk.Tk()
-        self.img = ImageTk.PhotoImage(Image.open(fname))
+        img = Image.open(fname)
+        scale = ctypes.windll.shcore.GetScaleFactorForDevice(0)/100
+        img = img.resize((int(img.size[0]/scale),int(img.size[1]/scale)))
+        self.img = ImageTk.PhotoImage(img)
         self.root.geometry(f"{self.img.width()}x{self.img.height()}")
         self.root.bind("<KeyPress>",self.keydown)
         self.canvas = tk.Canvas(self.root, height=self.img.height(), width=self.img.width(),bd=0, highlightthickness=0)
@@ -94,12 +98,22 @@ class main:
         self._state=val
 
     def screenshot(self,widget,fname):
+        # Find the coordinates
         widget.update()
         x=self.root.winfo_rootx()+widget.winfo_x()
         y=self.root.winfo_rooty()+widget.winfo_y()
         x1=x+widget.winfo_width()
         y1=y+widget.winfo_height()
-        ImageGrab.grab().crop((x,y,x1,y1)).save(fname)
+        
+        # Adjust for windows scaling
+        scale = ctypes.windll.shcore.GetScaleFactorForDevice(0)/100
+        x//=scale
+        y//=scale
+        x1//=scale
+        y1//=scale
+
+        # Take the screenshot
+        ImageGrab.grab().crop((int(x),int(y),int(x1),int(y1))).save(fname)
 
     def left_click(self,event:tk.Event):
         #print(event)
