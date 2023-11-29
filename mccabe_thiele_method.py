@@ -1,7 +1,9 @@
 lib = None
 try:
+    import os
     lib = "tkinter"
     import tkinter as tk
+    from tkinter import messagebox,filedialog
     lib = "pillow"
     from PIL import Image, ImageTk, ImageGrab
 except ImportError:
@@ -20,6 +22,7 @@ xB = 0.02
 q = 0.5
 R_relation = 1.4
 # R = R_relation * R_min
+decimals = 2
 
 BORDER_COLOR = "black"
 POINTER_COLOR = "blue"
@@ -38,12 +41,13 @@ TRAY_LINE_COLOR = "magenta"
 TRAY_LINE_SIZE = 4
 
 class main:
-    def __init__(self,fname,xD:float|int,zF:float|int,xB:float|int,q:float|int,R_relation:float|int):
+    def __init__(self,fname:str,xD:float|int,zF:float|int,xB:float|int,q:float|int,R_relation:float|int,decimals:int):
         self.xD = xD
         self.zF = zF
         self.xB = xB
         self.q = q
         self.R_relation = R_relation
+        self.decimals = decimals
 
         # Setup gui, with image
         self.root = tk.Tk()
@@ -282,13 +286,19 @@ class main:
                         x1,y1 = self.box_to_graph(x1,y1)
                         x2,y2 = self.xD,self.xD
 
+                        if self.decimals != -1:x1,y1 = round(x1,self.decimals),round(y1,self.decimals)
+
                         self.screenshot(self.canvas,"r_min.png")
                         self.canvas.delete(self.r_line)
 
                         a = (y1-y2)/(x1-x2)
                         R_min = -a/(a-1)
+                        if self.decimals != -1: R_min = round(R_min,self.decimals)
+
                         self.R = self.R_relation * R_min
-                        
+                        if self.decimals != -1: self.R = round(self.R,self.decimals)
+
+
                         print("x1 =",x1)
                         print("y1 =",y1)
                         print("x2 =",x2)
@@ -340,4 +350,64 @@ class main:
         y+=self.graph_min_y
 
         return (x,y)
-main(img_name,xD,zF,xB,q,R_relation)
+
+class settings:
+    def __init__(self,fname:str,xD:float|int,zF:float|int,xB:float|int,q:float|int,R_relation:float|int,decimals:int):
+        self.fname = fname
+        self.xD = xD
+        self.zF = zF
+        self.xB = xB
+        self.q = q
+        self.R_relation = R_relation
+        self.decimals = decimals
+
+        # Make gui
+        self.root = tk.Tk()
+
+        file_path_label = tk.Label(self.root, text="x-y diagram image:")
+        file_path_label.pack()
+        self.file_dialog_button = tk.Button(self.root, text="Open File", command=self.select_file)
+        self.file_dialog_button.pack()
+        if self.fname and os.path.exists(self.fname):
+            self.file_dialog_button.config(text = os.path.basename(self.fname))
+
+        _vars = ["xD","zF","xB","q","R_relation","decimals"]
+        self.var_labels_entry = [(var,tk.Label(self.root, text=f"{var}:"),tk.Entry(self.root)) for var in _vars]
+        for var,label,entry in self.var_labels_entry:
+            label.pack()
+            entry.pack()
+            entry.delete(0,tk.END)
+            text = getattr(self,var,None)
+            if text != None:
+                entry.insert(0,text)
+
+        draw_button = tk.Button(self.root, text="Draw!", command=self.draw)
+        draw_button.pack()
+
+        # Make it stop upon script stop
+        check = lambda:self.root.after(500, check)
+        self.root.after(500, check)
+        self.root.mainloop()
+
+    def select_file(self):
+        self.fname = filedialog.askopenfilename()
+        if self.fname and os.path.exists(self.fname):
+            self.file_dialog_button.config(text = os.path.basename(self.fname))
+
+
+    def draw(self):
+        if not self.fname or not os.path.exists(self.fname):
+            messagebox.showerror("Error", "Invalid file path. Please select a valid file.")
+            return
+
+        for var,label,entry in self.var_labels_entry:
+            val = entry.get()
+            if not val or not val.lstrip("-").replace(".","",1).isdigit():
+                messagebox.showerror("Error", f"Invalid {var}. Please enter a valid number.")
+                return
+            setattr(self,var,float(val))
+
+        self.root.destroy()
+        main(self.fname,self.xD,self.zF,self.xB,self.q,self.R_relation,int(self.decimals))
+
+settings(img_name,xD,zF,xB,q,R_relation,decimals)
