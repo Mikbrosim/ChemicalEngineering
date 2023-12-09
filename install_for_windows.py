@@ -22,4 +22,4 @@ with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
 os.remove(zip_filename)
 
 # Install the required packages using pip
-os.system("python -m pip install sympy pydot pillow tkinter")
+os.system("python -m pip install sympy pydot pillow tk")

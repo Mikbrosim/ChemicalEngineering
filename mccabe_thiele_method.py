@@ -2,7 +2,7 @@ lib = None
 try:
     import os
     import ctypes
-    lib = "tkinter"
+    lib = "tk"
     import tkinter as tk
     from tkinter import messagebox,filedialog
     lib = "pillow"
@@ -370,7 +370,7 @@ class main:
 
 class settings:
     def __init__(self,fname:str,xD:float|int,zF:float|int,xB:float|int,q:float|int,R_relation:float|int,decimals:int):
-        self.fname = fname
+        self.fname = os.path.join(os.path.dirname(__file__),fname)
         self.xD = xD
         self.zF = zF
         self.xB = xB
